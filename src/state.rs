@@ -109,6 +109,41 @@ pub struct TreeState {
     pub vitals: Vitals,
 }
 
+/// Why a `state.json` cannot be used (exit code 4 in the CLI; the file is never overwritten).
+#[derive(Debug, thiserror::Error)]
+pub enum StateError {
+    #[error("state.json is corrupt: {0}")]
+    Corrupt(String),
+    #[error("state.json has schema {found}, newer than this version understands ({SCHEMA}); upgrade git-bonsai")]
+    Newer { found: u32 },
+}
+
+/// Parses a `state.json`, migrating older schemas up to [`SCHEMA`].
+pub fn load(json: &str) -> Result<TreeState, StateError> {
+    let v: serde_json::Value =
+        serde_json::from_str(json).map_err(|e| StateError::Corrupt(e.to_string()))?;
+    let found = v
+        .get("schema")
+        .and_then(|s| s.as_u64())
+        .ok_or_else(|| StateError::Corrupt("missing or invalid `schema`".into()))?;
+    let found = u32::try_from(found).map_err(|_| StateError::Newer { found: u32::MAX })?;
+    if found > SCHEMA {
+        return Err(StateError::Newer { found });
+    }
+    if found == 0 {
+        return Err(StateError::Corrupt("schema 0 does not exist".into()));
+    }
+    // Schema 1 is the first; migrate_v1_to_v2 and friends go here.
+    serde_json::from_value(v).map_err(|e| StateError::Corrupt(e.to_string()))
+}
+
+/// Serialises a state as pretty JSON with a trailing newline (stable bytes for git diffs).
+pub fn to_json(state: &TreeState) -> String {
+    let mut s = serde_json::to_string_pretty(state).unwrap_or_default();
+    s.push('\n');
+    s
+}
+
 /// `Option<Date>` as `"YYYY-MM-DD"` or `null`.
 pub mod opt_ymd {
     use serde::{Deserialize, Deserializer, Serializer};
@@ -154,5 +189,20 @@ mod tests {
         );
         let back: TreeState = serde_json::from_str(&serde_json::to_string(&s).unwrap()).unwrap();
         assert_eq!(back, s);
+        assert_eq!(load(&to_json(&s)).unwrap(), s);
+    }
+
+    #[test]
+    fn load_rejects_corrupt_and_newer() {
+        assert!(matches!(load("{"), Err(StateError::Corrupt(_))));
+        assert!(matches!(load("{}"), Err(StateError::Corrupt(_))));
+        assert!(matches!(
+            load(r#"{"schema": 2, "whatever": true}"#),
+            Err(StateError::Newer { found: 2 })
+        ));
+        assert!(matches!(
+            load(r#"{"schema": 1, "login": 5}"#),
+            Err(StateError::Corrupt(_))
+        ));
     }
 }
