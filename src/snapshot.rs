@@ -73,6 +73,10 @@ pub struct Snapshot {
     /// listed here with no entry for a repo means 0 commits). Finished ones go to the year cache.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub years: Vec<i32>,
+    /// User or organization. An organization has no contribution calendar: `calendar` is
+    /// synthesised from default-branch commits of its top repos over the last 70 days.
+    #[serde(default)]
+    pub kind: AccountKind,
 }
 
 /// One day of the contribution calendar.

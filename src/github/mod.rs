@@ -5,9 +5,12 @@
 //! daily query with the current year, the last 365 days, the last 28 days and the day itself
 //! as aliases of query 2. A daily run of an account with ≤ 300 repos costs ≤ 4 queries.
 
+#[macro_use]
+mod org;
 mod queries;
 
-use crate::snapshot::{CalendarDay, RepoSignal, Snapshot};
+use crate::config::Config;
+use crate::snapshot::{AccountKind, CalendarDay, RepoSignal, Snapshot};
 use std::collections::BTreeMap;
 use std::fmt;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -162,7 +165,7 @@ impl Client {
         self.queries.load(Ordering::Relaxed)
     }
 
-    fn log(&self, msg: &str) {
+    pub(crate) fn log(&self, msg: &str) {
         if let Some(l) = &self.log {
             l(&self.clean(msg));
         }
@@ -274,6 +277,16 @@ fn classify(status: u16, text: &str) -> Outcome {
         if errs.iter().any(|e| field(e, "type") == "RATE_LIMITED") {
             return Outcome::Retry("RATE_LIMITED".into());
         }
+        // `user` + `organization` in one query: one of them is NOT_FOUND by design.
+        let partial = json
+            .get("data")
+            .and_then(|d| d.as_object())
+            .is_some_and(|d| d.values().any(|v| !v.is_null()));
+        if partial && errs.iter().all(|e| field(e, "type") == "NOT_FOUND") {
+            if let Some(d) = json.get("data") {
+                return Outcome::Data(d.clone());
+            }
+        }
         let first = &errs[0];
         return Outcome::Fail(ApiError::GraphQl {
             kind: field(first, "type"),
@@ -289,16 +302,48 @@ fn classify(status: u16, text: &str) -> Outcome {
 /// Per finished year, per repo id, the owner's commits (`TreeState::year_cache`).
 pub type YearCache = BTreeMap<String, BTreeMap<String, u64>>;
 
-/// Fetches the snapshot of `login` for `date` (a full day at `offset`). Years in `year_cache`
-/// are taken from it; the others are queried, with their calendars.
+/// How to fetch.
+#[derive(Debug, Clone)]
+pub struct FetchOptions {
+    /// The zone offset of the day's boundaries.
+    pub offset: UtcOffset,
+    /// Treat the login as an organization without asking (`--org`).
+    pub force_org: bool,
+    /// Branch selection (orgs: which repos get calendar and yearly queries).
+    pub config: Config,
+}
+
+impl Default for FetchOptions {
+    fn default() -> Self {
+        FetchOptions {
+            offset: UtcOffset::UTC,
+            force_org: false,
+            config: Config::default(),
+        }
+    }
+}
+
+/// Fetches the snapshot of `login` for `date` (a full day at `opts.offset`). A user's years in
+/// `year_cache` are taken from it, the others are queried with their calendars. An organization
+/// is detected in the first request (or forced) and fetched by [`org::fetch`].
 pub fn fetch(
     client: &Client,
     login: &str,
     date: Date,
-    offset: UtcOffset,
+    opts: &FetchOptions,
     year_cache: &YearCache,
 ) -> Result<Snapshot, ApiError> {
-    let profile = queries::profile(client, login)?;
+    if opts.force_org {
+        return org::fetch(client, login, date, opts, year_cache, None);
+    }
+    let profile = match queries::profile(client, login)? {
+        queries::Account::User(p) => p,
+        queries::Account::Org(first) => {
+            client.log(&format!("{login} is an organization"));
+            return org::fetch(client, login, date, opts, year_cache, Some(first));
+        }
+    };
+    let offset = opts.offset;
     let created = profile.created.to_offset(offset).date();
     let this_year = date.year();
     let missing: Vec<i32> = (created.year()..this_year)
@@ -408,6 +453,7 @@ pub fn fetch(
             .map(|(date, count)| CalendarDay { date, count })
             .collect(),
         years: (created.year()..=this_year).collect(),
+        kind: AccountKind::User,
     })
 }
 

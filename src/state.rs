@@ -196,6 +196,29 @@ mod tests {
     }
 
     #[test]
+    fn kind_defaults_to_user_and_round_trips() {
+        use crate::snapshot::AccountKind;
+        let json = r#"{"schema": 1, "login": "a", "seed": "0123456789abcdef",
+          "planted": "2020-01-01", "last_grown": null,
+          "trunk": {"height": 8, "girth": 2, "bends": [[0,0]]}, "branches": []}"#;
+        let mut s = load(json).unwrap();
+        assert_eq!(s.kind, AccountKind::User);
+        s.kind = AccountKind::Org;
+        let out = to_json(&s);
+        assert!(out.contains(r#""kind": "org""#));
+        assert_eq!(load(&out).unwrap().kind, AccountKind::Org);
+        let snap: crate::snapshot::Snapshot = serde_json::from_str(
+            r#"{"login":"a","date":"2026-01-02","account_created":"2020-01-01",
+                "public_repos":0,"repos":[],"calendar":[],"kind":"org"}"#,
+        )
+        .unwrap();
+        assert_eq!(snap.kind, AccountKind::Org);
+        let back: crate::snapshot::Snapshot =
+            serde_json::from_str(&serde_json::to_string(&snap).unwrap()).unwrap();
+        assert_eq!(back, snap);
+    }
+
+    #[test]
     fn load_rejects_corrupt_and_newer() {
         assert!(matches!(load("{"), Err(StateError::Corrupt(_))));
         assert!(matches!(load("{}"), Err(StateError::Corrupt(_))));

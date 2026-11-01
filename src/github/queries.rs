@@ -7,8 +7,13 @@ use time::format_description::well_known::Rfc3339;
 use time::{Date, Duration, Month, OffsetDateTime, UtcOffset};
 
 /// Query 1: profile and owned public repos, 100 per page (RFC fields plus `login` and
-/// `archivedAt`, the day pruning happened).
-pub const PROFILE: &str = r#"query($login: String!, $after: String) {
+/// `archivedAt`, the day pruning happened). `organization` detects an org login in the same
+/// request (GitHub answers `user: null` plus a NOT_FOUND error) and brings its first repo page.
+pub const PROFILE: &str = concat!(
+    r#"query($login: String!, $after: String) {
+  organization(login: $login) { "#,
+    org_fields!(),
+    r#" }
   user(login: $login) {
     login
     createdAt
@@ -21,7 +26,8 @@ pub const PROFILE: &str = r#"query($login: String!, $after: String) {
       }
     }
   }
-}"#;
+}"#
+);
 
 /// Pages of query 1 at most (10 000 repos).
 const MAX_PAGES: usize = 100;
@@ -134,6 +140,8 @@ pub struct Contribs {
 #[derive(Deserialize)]
 struct ProfileData {
     user: Option<UserNode>,
+    #[serde(default)]
+    organization: Option<super::org::OrgNode>,
 }
 
 #[derive(Deserialize)]
@@ -218,15 +226,15 @@ struct TotalNode {
     total_count: u64,
 }
 
-fn decode<T: serde::de::DeserializeOwned>(v: serde_json::Value) -> Result<T, ApiError> {
+pub(super) fn decode<T: serde::de::DeserializeOwned>(v: serde_json::Value) -> Result<T, ApiError> {
     serde_json::from_value(v).map_err(|e| ApiError::Decode(e.to_string()))
 }
 
-fn timestamp(s: &str) -> Result<OffsetDateTime, ApiError> {
+pub(super) fn timestamp(s: &str) -> Result<OffsetDateTime, ApiError> {
     OffsetDateTime::parse(s, &Rfc3339).map_err(|e| ApiError::Decode(format!("date {s:?}: {e}")))
 }
 
-fn not_found(e: ApiError, login: &str) -> ApiError {
+pub(super) fn not_found(e: ApiError, login: &str) -> ApiError {
     match e {
         ApiError::GraphQl { kind, .. } if kind == "NOT_FOUND" => {
             ApiError::UserNotFound(login.to_string())
@@ -235,8 +243,23 @@ fn not_found(e: ApiError, login: &str) -> ApiError {
     }
 }
 
-/// Runs query 1 over all pages.
-pub fn profile(client: &Client, login: &str) -> Result<Profile, ApiError> {
+/// A login is a user or an organization (with its first page of repos).
+pub enum Account {
+    User(Profile),
+    Org(super::org::OrgNode),
+}
+
+impl std::fmt::Debug for Account {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Account::User(p) => write!(f, "User({})", p.login),
+            Account::Org(_) => f.write_str("Org"),
+        }
+    }
+}
+
+/// Runs query 1 over all pages; for an organization, returns after the first request.
+pub fn profile(client: &Client, login: &str) -> Result<Account, ApiError> {
     let mut after: Option<String> = None;
     let mut out: Option<Profile> = None;
     for page in 0..MAX_PAGES {
@@ -248,6 +271,11 @@ pub fn profile(client: &Client, login: &str) -> Result<Profile, ApiError> {
             )
             .map_err(|e| not_found(e, login))?;
         let d: ProfileData = decode(data)?;
+        if d.user.is_none() && out.is_none() {
+            if let Some(org) = d.organization {
+                return Ok(Account::Org(org));
+            }
+        }
         let user = d
             .user
             .ok_or_else(|| ApiError::UserNotFound(login.to_string()))?;
@@ -279,7 +307,8 @@ pub fn profile(client: &Client, login: &str) -> Result<Profile, ApiError> {
             break;
         }
     }
-    out.ok_or_else(|| ApiError::UserNotFound(login.to_string()))
+    out.map(Account::User)
+        .ok_or_else(|| ApiError::UserNotFound(login.to_string()))
 }
 
 /// Runs query 2 for the given windows (one request), keyed by alias.

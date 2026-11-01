@@ -25,6 +25,9 @@ pub struct Common {
     /// Static SVG without the growth animation.
     #[arg(long, global = true)]
     pub no_animate: bool,
+    /// Treat the login as a GitHub organization (detected automatically otherwise).
+    #[arg(long, global = true)]
+    pub org: bool,
     /// Also write `bonsai.gif` (grow, plant).
     #[arg(long, global = true)]
     pub gif: bool,
