@@ -376,7 +376,9 @@ pub fn render(scene: &Scene, opts: &SvgOptions) -> String {
         }
         let _ = write!(
             cells,
-            r##"<use href="#q" x="{px}" y="{py}" class="{class}"{extra}/>"##
+            // A real rect: WebKit scales a `<use>` with `transform-box: fill-box` around the wrong
+            // origin, which would fling popping cells across the grid in Safari.
+            r#"<rect x="{px}" y="{py}" width="{CELL}" height="{CELL}" rx="3" class="{class}"{extra}/>"#
         );
     }
     for g in empties.values() {
