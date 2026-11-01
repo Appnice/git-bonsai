@@ -34,7 +34,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             )?;
             println!("{out}");
         }
-        print!("{}", git_bonsai::render::ascii::print(&scene.grid));
+        #[cfg(feature = "gif")]
+        {
+            let out = format!("target/gallery/{stem}.gif");
+            std::fs::write(&out, git_bonsai::render::gif::render(&scene, Theme::Dark)?)?;
+            println!("{out}");
+        }
     }
     Ok(())
 }

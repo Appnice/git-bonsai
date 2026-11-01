@@ -8,6 +8,7 @@ license = "MIT OR Apache-2.0"
 publish = false
 
 [dependencies]
+gif = { version = "0.13", optional = true }
 rand_chacha = "0.9"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -15,6 +16,7 @@ thiserror = "2"
 time = { version = "0.3", features = ["serde", "macros", "parsing", "formatting"] }
 
 [dev-dependencies]
+gif = "0.13"
 insta = "1"
 proptest = "1"
 roxmltree = "0.20"
@@ -22,3 +24,6 @@ roxmltree = "0.20"
 [profile.dev.package]
 insta.opt-level = 3
 similar.opt-level = 3
+
+[features]
+gif = ["dep:gif"]

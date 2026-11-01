@@ -2,6 +2,8 @@
 
 pub mod ascii;
 pub mod font;
+#[cfg(feature = "gif")]
+pub mod gif;
 pub mod svg;
 
 use crate::grid::{Grid, LangId};

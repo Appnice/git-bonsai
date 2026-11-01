@@ -27,15 +27,15 @@ pub const WIDTH: u32 = 600;
 /// Image height in px.
 pub const HEIGHT: u32 = 672;
 
-const PAD: u32 = 40;
-const CELL: u32 = 12;
-const STEP: u32 = 14; // cell + gap
+pub(crate) const PAD: u32 = 40;
+pub(crate) const CELL: u32 = 12;
+pub(crate) const STEP: u32 = 14; // cell + gap
 const GRID_PX_W: u32 = GRID_W as u32 * STEP - 2;
-const GRID_X: u32 = (WIDTH - GRID_PX_W) / 2;
-const GRID_Y: u32 = 104;
-const LEGEND_Y: u32 = GRID_Y + GRID_H as u32 * STEP - 2 + 20;
-const LEGEND_COL_GAP: u32 = 24;
-const LEGEND_ROW: u32 = 22;
+pub(crate) const GRID_X: u32 = (WIDTH - GRID_PX_W) / 2;
+pub(crate) const GRID_Y: u32 = 104;
+pub(crate) const LEGEND_Y: u32 = GRID_Y + GRID_H as u32 * STEP - 2 + 20;
+pub(crate) const LEGEND_COL_GAP: u32 = 24;
+pub(crate) const LEGEND_ROW: u32 = 22;
 const FONT: &str = "ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace";
 
 // Layout invariants, checked at compile time.
@@ -123,7 +123,7 @@ fn num(v: f64) -> String {
     }
 }
 
-fn is_tree(r: Role) -> bool {
+pub(crate) fn is_tree(r: Role) -> bool {
     matches!(
         r,
         Role::Trunk(_)
@@ -135,13 +135,13 @@ fn is_tree(r: Role) -> bool {
     )
 }
 
-fn is_pot(r: Role) -> bool {
+pub(crate) fn is_pot(r: Role) -> bool {
     matches!(r, Role::Pot(_) | Role::Soil | Role::Moss)
 }
 
 /// Distance of every tree cell from the trunk's base (8-neighbour BFS over tree cells).
 /// Cells the walk does not reach get `None`.
-fn growth_distance(scene: &Scene) -> Vec<Option<u32>> {
+pub(crate) fn growth_distance(scene: &Scene) -> Vec<Option<u32>> {
     let g = &scene.grid;
     let mut dist = vec![None; GRID_W * GRID_H];
     let mut q = VecDeque::new();
