@@ -4,6 +4,7 @@
 //! function; the image is always a function of the tree state, never of the raw data.
 
 pub mod grid;
+pub mod layout;
 pub mod palette;
 pub mod reference;
 pub mod render;

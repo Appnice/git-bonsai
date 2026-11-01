@@ -66,4 +66,6 @@ pub struct Scene {
     pub header: Header,
     /// Up to 4 lines (two columns, two rows); extra items are not drawn.
     pub legend: Vec<LegendItem>,
+    /// Cells that grew on the last grown day `(x, y)`; they pulse in the animated image.
+    pub fresh: Vec<(usize, usize)>,
 }

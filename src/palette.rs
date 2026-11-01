@@ -144,6 +144,8 @@ pub mod fixed {
     pub const SOIL: Rgb = Rgb::hex(0x3a2a1a);
     pub const MOSS: Rgb = Rgb::hex(0x3fb950);
     pub const BLOSSOM: Rgb = Rgb::hex(0xff7eb6);
+    /// An autumn leaf on its way down.
+    pub const FALLEN: Rgb = Rgb::hex(0xd29922);
     pub const POT_RIM: Rgb = Rgb::hex(0xa86f4c);
     pub const POT_BODY: Rgb = Rgb::hex(0x8d5636);
     pub const POT_DARK: Rgb = Rgb::hex(0x5e3520);
@@ -161,7 +163,8 @@ pub fn cell_color(role: Role, theme: &ThemeColors, langs: &[LangPalette]) -> Rgb
             .get(usize::from(lang))
             .map_or(theme.empty, |p| p.level(level)),
         Role::Blossom => fixed::BLOSSOM,
-        Role::Scar | Role::Fallen => fixed::SCAR,
+        Role::Scar => fixed::SCAR,
+        Role::Fallen => fixed::FALLEN,
         Role::Soil => fixed::SOIL,
         Role::Moss => fixed::MOSS,
         Role::Pot(PotPart::Rim) => fixed::POT_RIM,

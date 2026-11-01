@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "login": "mira-codes",
+  "seed": "9f2c41a07be3d5e1",
+  "planted": "2016-03-14",
+  "last_grown": "2026-10-31",
+  "trunk": { "height": 22, "girth": 5, "bends": [[0,0],[4,-2],[9,1],[14,-1],[19,0]] },
+  "branches": [
+    { "repo_id": "R_old", "name": "old-android-lib", "lang": "Kotlin", "color": "#a97bff",
+      "anchor": 5, "side": "left", "length": 3, "pad": 0, "commits_total": 310, "pruned": "2024-05-02" },
+    { "repo_id": "R_glyphs", "name": "glyphs", "lang": "Python", "color": "#3572a5",
+      "anchor": 12, "side": "left", "length": 7, "pad": 4, "commits_total": 640, "pruned": null },
+    { "repo_id": "R_ferrite", "name": "ferrite", "lang": "Rust", "color": "#dea584",
+      "anchor": 8, "side": "right", "length": 6, "pad": 5, "commits_total": 1204, "pruned": null },
+    { "repo_id": "R_lumen", "name": "lumen", "lang": "Kotlin", "color": "#a97bff",
+      "anchor": 21, "side": "right", "length": 2, "pad": 6, "commits_total": 2108, "pruned": null }
+  ],
+  "year_cache": {},
+  "history": [ { "date": "2026-10-31", "cells_added": 2 } ],
+  "vitals": {
+    "phase": "bloom", "streak_days": 23, "idle_days": 0, "commits_total": 4812,
+    "stars_total": 140, "public_repos": 41,
+    "activity_28d": { "R_lumen": 64, "R_ferrite": 30, "R_glyphs": 6 },
+    "grew": { "R_ferrite": 1 }
+  }
+}

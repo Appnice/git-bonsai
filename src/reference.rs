@@ -64,5 +64,7 @@ pub fn board_scene(phase: Phase) -> Scene {
                 repo: "old-android-lib".into(),
             },
         ],
+        // The tips of the right and left branches grew today.
+        fresh: vec![(35, 11), (34, 11), (0, 13), (0, 14)],
     }
 }
