@@ -286,7 +286,7 @@ pub fn render(scene: &Scene, opts: &SvgOptions) -> String {
             num(tag_w - 1.5),
             t.muted
         );
-        let tag_fill = format!(r#" class="mu""#);
+        let tag_fill = r#" class="mu""#.to_string();
         body.push_str(&pixel_text("org", tx + 6.0, ty + 3.0, 2.0, &mut |_| {
             tag_fill.clone()
         }));
