@@ -72,7 +72,7 @@ One commit wakes it up.
        runs-on: ubuntu-latest
        steps:
          - uses: actions/checkout@v4
-         - uses: appnice/git-bonsai@v1
+         - uses: appnice/git-bonsai@v0
    ```
 
 2. Commit it. The push runs the workflow once: it plants the tree and replays your whole history day by
