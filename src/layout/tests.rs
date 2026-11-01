@@ -18,6 +18,7 @@ fn state_with(branches: Vec<Branch>, height: u32, girth: u32, bends: Vec<[i32; 2
         year_cache: Default::default(),
         history: vec![],
         vitals: Vitals::default(),
+        kind: Default::default(),
     }
 }
 

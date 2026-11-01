@@ -69,7 +69,7 @@ fn run(cli: Cli) -> Result<(), Fail> {
                 .as_ref()
                 .map(|s| s.year_cache.clone())
                 .unwrap_or_default();
-            let (snap, queries) = snapshot(c, login, from_snapshot.as_deref(), &cache)?;
+            let (snap, queries) = snapshot(c, login, from_snapshot.as_deref(), &cache, &cfg)?;
             let next = match &old {
                 Some(s) => git_bonsai::grow(s, &snap, &cfg),
                 None => git_bonsai::plant(&snap, &cfg),
@@ -117,7 +117,8 @@ fn run(cli: Cli) -> Result<(), Fail> {
         }
         Cmd::Snapshot { login, out } => {
             let t0 = Instant::now();
-            let (snap, queries) = snapshot(c, login, None, &YearCache::new())?;
+            let cfg = config(c, Path::new("bonsai/state.json"))?;
+            let (snap, queries) = snapshot(c, login, None, &YearCache::new(), &cfg)?;
             log(
                 c,
                 &format!(
@@ -158,7 +159,8 @@ fn run(cli: Cli) -> Result<(), Fail> {
                 }
             };
             let t0 = Instant::now();
-            let (snap, queries) = snapshot(c, &login, from_snapshot.as_deref(), &YearCache::new())?;
+            let (snap, queries) =
+                snapshot(c, &login, from_snapshot.as_deref(), &YearCache::new(), &cfg)?;
             let next = git_bonsai::plant(&snap, &cfg).map_err(grow_fail)?;
             log(
                 c,
@@ -314,6 +316,7 @@ fn snapshot(
     login: &str,
     from: Option<&Path>,
     cache: &YearCache,
+    cfg: &Config,
 ) -> Result<(Snapshot, u32), Fail> {
     if let Some(p) = from {
         let text = std::fs::read_to_string(p)
@@ -340,7 +343,12 @@ fn snapshot(
             eprintln!("  {m}");
         }
     });
-    let snap = github::fetch(&client, login, date, offset, cache).map_err(api_fail)?;
+    let opts = github::FetchOptions {
+        offset,
+        force_org: c.org,
+        config: cfg.clone(),
+    };
+    let snap = github::fetch(&client, login, date, &opts, cache).map_err(api_fail)?;
     Ok((snap, client.queries()))
 }
 

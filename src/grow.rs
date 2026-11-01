@@ -4,7 +4,7 @@
 
 use crate::config::{Config, ConfigError};
 use crate::rules;
-use crate::snapshot::{RepoSignal, Snapshot};
+use crate::snapshot::{AccountKind, RepoSignal, Snapshot};
 use crate::state::{Branch, HistoryEntry, PhaseKind, Side, TreeState, Trunk, Vitals, SCHEMA};
 use std::collections::{BTreeMap, BTreeSet};
 use time::{Date, Duration};
@@ -77,7 +77,8 @@ pub fn grow(state: &TreeState, snapshot: &Snapshot, cfg: &Config) -> Result<Tree
         .iter()
         .map(|c| (c.date, c.count))
         .collect();
-    let commits_account: u64 = snapshot.repos.iter().map(|r| r.commits_total).sum();
+    let commits_account = account_commits(snapshot, &snapshot.repos);
+    let origin = idle_origin(snapshot, state.planted);
     let mut next = state.clone();
     let mut out = None;
     let mut day = start;
@@ -87,7 +88,7 @@ pub fn grow(state: &TreeState, snapshot: &Snapshot, cfg: &Config) -> Result<Tree
             repos: &snapshot.repos,
             commits_account,
             streak: rules::streak(&calendar, day),
-            idle: rules::idle_days(&calendar, day, state.planted),
+            idle: rules::idle_days(&calendar, day, origin),
         };
         out = Some(step(&mut next, &d, cfg));
         day += Duration::days(1);
@@ -127,6 +128,7 @@ pub fn plant(snapshot: &Snapshot, cfg: &Config) -> Result<TreeState, GrowError> 
         year_cache: BTreeMap::new(),
         history: Vec::new(),
         vitals: Vitals::default(),
+        kind: snapshot.kind,
     };
     let calendar: BTreeMap<Date, u32> = snapshot
         .calendar
@@ -136,6 +138,9 @@ pub fn plant(snapshot: &Snapshot, cfg: &Config) -> Result<TreeState, GrowError> 
     let est = Estimator::new(snapshot, &calendar);
     let mut repos = snapshot.repos.clone();
     let (mut streak, mut last_active) = (0u32, planted);
+    // Days before the calendar starts (an org's calendar covers 70 days) count as active:
+    // unknown activity must not make the simulated tree dormant.
+    let origin = idle_origin(snapshot, planted);
     let mut day = planted;
     let mut i = 0usize;
     while day < snapshot.date {
@@ -143,21 +148,22 @@ pub fn plant(snapshot: &Snapshot, cfg: &Config) -> Result<TreeState, GrowError> 
         if count > 0 {
             streak += 1;
             last_active = day;
+        } else if day < origin {
+            streak = 0;
+            last_active = day;
         } else {
             streak = 0;
         }
-        let mut account = 0u64;
         for (k, r) in repos.iter_mut().enumerate() {
             let src = &snapshot.repos[k];
             r.commits_total = est.cum(k, i);
             r.commits_365d = est.cum(k, i) - if i >= 365 { est.cum(k, i - 365) } else { 0 };
             r.is_archived = src.archived_at.is_some_and(|a| a <= day);
-            account += r.commits_total;
         }
         let d = Day {
             date: day,
             repos: &repos,
-            commits_account: account,
+            commits_account: account_commits(snapshot, &repos),
             streak,
             idle: (day - last_active).whole_days() as u32,
         };
@@ -168,9 +174,9 @@ pub fn plant(snapshot: &Snapshot, cfg: &Config) -> Result<TreeState, GrowError> 
     let d = Day {
         date: snapshot.date,
         repos: &snapshot.repos,
-        commits_account: snapshot.repos.iter().map(|r| r.commits_total).sum(),
+        commits_account: account_commits(snapshot, &snapshot.repos),
         streak: rules::streak(&calendar, snapshot.date),
-        idle: rules::idle_days(&calendar, snapshot.date, planted),
+        idle: rules::idle_days(&calendar, snapshot.date, origin),
     };
     let out = step(&mut state, &d, cfg);
     finish(&mut state, snapshot, Some(out), &calendar);
@@ -293,8 +299,8 @@ fn finish(
     state.vitals = Vitals {
         phase,
         streak_days: rules::streak(calendar, snap.date),
-        idle_days: rules::idle_days(calendar, snap.date, state.planted),
-        commits_total: snap.repos.iter().map(|r| r.commits_total).sum(),
+        idle_days: rules::idle_days(calendar, snap.date, idle_origin(snap, state.planted)),
+        commits_total: account_commits(snap, &snap.repos),
         stars_total: snap
             .repos
             .iter()
@@ -310,8 +316,29 @@ fn finish(
             .collect(),
         grew,
     };
+    state.kind = snap.kind;
     state.history = rollup(std::mem::take(&mut state.history), snap.date);
     state.last_grown = Some(snap.date);
+}
+
+/// The account's commits: all owned repos for a user; for an org, the all-time default-branch
+/// commits of its non-fork repos (a fork's history is upstream's).
+fn account_commits(snap: &Snapshot, repos: &[RepoSignal]) -> u64 {
+    repos
+        .iter()
+        .filter(|r| snap.kind == AccountKind::User || !r.is_fork)
+        .map(|r| r.commits_total)
+        .sum()
+}
+
+/// Where idle days count from when the calendar shows no activity: account creation for a
+/// user (the calendar covers the whole history), the calendar's first day for an org.
+fn idle_origin(snap: &Snapshot, planted: Date) -> Date {
+    match (snap.kind, snap.calendar.first()) {
+        (AccountKind::Org, Some(first)) => first.date.max(planted),
+        (AccountKind::Org, None) => snap.date,
+        (AccountKind::User, _) => planted,
+    }
 }
 
 fn living(state: &TreeState) -> impl Iterator<Item = &Branch> {
@@ -641,6 +668,7 @@ mod tests {
             repos,
             calendar,
             years: Vec::new(),
+            kind: AccountKind::User,
         }
     }
 
@@ -661,6 +689,7 @@ mod tests {
             year_cache: BTreeMap::new(),
             history: Vec::new(),
             vitals: Vitals::default(),
+            kind: AccountKind::User,
         }
     }
 
@@ -963,6 +992,33 @@ mod tests {
         s2.date = date!(2026 - 11 - 01);
         let g = grow(&a, &s2, &cfg()).unwrap();
         assert_eq!(grow(&g, &s2, &cfg()).unwrap(), g);
+    }
+
+    #[test]
+    fn org_with_a_70_day_calendar_plants_a_grown_tree() {
+        let mut s = history_snapshot();
+        s.kind = AccountKind::Org;
+        let from = s.date - Duration::days(69);
+        s.calendar.retain(|c| c.date >= from);
+        let mut fork = repo("R_fork", 99_999, 0);
+        fork.is_fork = true;
+        s.repos.push(fork);
+        let a = plant(&s, &cfg()).unwrap();
+        assert_eq!(a.kind, AccountKind::Org);
+        // unknown activity before the calendar does not make the tree dormant for years
+        let new = a.branches.iter().find(|b| b.repo_id == "R_new").unwrap();
+        assert_eq!(new.length, rules::branch_len(1500));
+        assert!(a.history.iter().any(|h| h.date.starts_with("2025")));
+        // forks do not count towards an org's commits
+        assert_eq!(a.vitals.commits_total, 300 + 1500 + 200);
+        assert_eq!(a.vitals.phase, PhaseKind::Bloom); // every calendar day has commits
+                                                      // a silent org is dormant, idle counted from the calendar's start
+        for c in &mut s.calendar {
+            c.count = 0;
+        }
+        let d = plant(&s, &cfg()).unwrap();
+        assert_eq!(d.vitals.phase, PhaseKind::Dormant);
+        assert_eq!(d.vitals.idle_days, 69);
     }
 
     fn state_json(s: &TreeState) -> String {

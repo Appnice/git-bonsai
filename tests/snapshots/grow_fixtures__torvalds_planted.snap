@@ -1,6 +1,5 @@
 ---
 source: tests/grow_fixtures.rs
-assertion_line: 25
 expression: "state::to_json(&a)"
 ---
 {
@@ -290,5 +289,6 @@ expression: "state::to_json(&a)"
       "R_kgDOQ8XTDQ": 0
     },
     "grew": {}
-  }
+  },
+  "kind": "user"
 }

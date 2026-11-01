@@ -1,4 +1,5 @@
 use super::*;
+use crate::snapshot::AccountKind;
 use std::sync::{Arc, Mutex};
 use time::macros::date;
 
@@ -202,7 +203,14 @@ fn fetch_builds_a_snapshot_and_uses_the_year_cache() {
     }
     let c = Client::with_transport(Box::new(Shared(fake.clone())));
     let date = date!(2026 - 10 - 31);
-    let s = fetch(&c, "octo", date, UtcOffset::UTC, &YearCache::new()).unwrap();
+    let s = fetch(
+        &c,
+        "octo",
+        date,
+        &FetchOptions::default(),
+        &YearCache::new(),
+    )
+    .unwrap();
     // 2 profile pages + 3 finished years + 1 daily
     assert_eq!(c.queries(), 6);
     assert_eq!(s.login, "Octo");
@@ -239,7 +247,7 @@ fn fetch_builds_a_snapshot_and_uses_the_year_cache() {
         cache.insert(y.into(), [("R_a".to_string(), 1u64)].into());
     }
     let c = Client::with_transport(Box::new(Shared(fake.clone())));
-    let s = fetch(&c, "octo", date, UtcOffset::UTC, &cache).unwrap();
+    let s = fetch(&c, "octo", date, &FetchOptions::default(), &cache).unwrap();
     assert_eq!(c.queries(), 3);
     assert_eq!(s.repos[0].commits_total, 3 + 40);
     assert_eq!(s.repos[2].commits_total, 0);
@@ -261,4 +269,215 @@ fn windows_respect_the_offset_and_one_year_limit() {
     }
     let q = queries::contributions_query(&daily_windows(date!(2026 - 03 - 01), off));
     assert!(q.contains("fragment WithCalendar") && q.contains("fragment ByRepo"));
+}
+
+/// A fake organization "acme" (created 2024-03-01) with repos `R_0`..`R_8`:
+/// R_i has 100·(i+1) commits all-time and 10·(i+1) in 365 days; `R_8` is a fork.
+/// On the default branch R_i has (i+1) commits every day, which the calendar sums.
+struct FakeOrg {
+    requests: Mutex<Vec<String>>,
+}
+
+fn repo_node(i: usize) -> serde_json::Value {
+    serde_json::json!({
+        "id": format!("R_{i}"), "name": format!("repo{i}"), "isFork": i == 8,
+        "isArchived": false, "archivedAt": null, "stargazerCount": 10 * i,
+        "primaryLanguage": {"name": "Rust", "color": "#dea584"}
+    })
+}
+
+fn org_page(range: std::ops::Range<usize>, next: bool) -> serde_json::Value {
+    serde_json::json!({
+        "login": "Acme", "createdAt": "2024-03-01T10:00:00Z",
+        "repositories": {
+            "totalCount": 9,
+            "pageInfo": {"hasNextPage": next, "endCursor": if next { "c1" } else { "" }},
+            "nodes": range.map(repo_node).collect::<Vec<_>>()
+        }
+    })
+}
+
+/// `rI: node(id: "R_x") { … aliasA: history(…) … }` lines → `{rI: {defaultBranchRef: {target: {alias: {totalCount}}}}}`.
+fn alias_reply(q: &str, value: impl Fn(usize, &str) -> u64) -> serde_json::Value {
+    let mut data = serde_json::Map::new();
+    for line in q.lines().filter(|l| l.starts_with("  r")) {
+        let alias = line.trim().split(':').next().unwrap_or("").to_string();
+        let id = line
+            .split("node(id: \"")
+            .nth(1)
+            .and_then(|s| s.split('"').next())
+            .unwrap_or("");
+        let i: usize = id.trim_start_matches("R_").parse().unwrap_or(0);
+        let mut target = serde_json::Map::new();
+        for part in line
+            .split(": history(")
+            .collect::<Vec<_>>()
+            .iter()
+            .rev()
+            .skip(1)
+        {
+            let a = part.rsplit(' ').next().unwrap_or("");
+            target.insert(a.into(), serde_json::json!({"totalCount": value(i, a)}));
+        }
+        data.insert(
+            alias,
+            serde_json::json!({"defaultBranchRef": {"target": target}}),
+        );
+    }
+    serde_json::Value::Object(data)
+}
+
+impl Transport for FakeOrg {
+    fn post(&self, body: &str) -> Result<(u16, String), String> {
+        self.requests.lock().unwrap().push(body.to_string());
+        let v: serde_json::Value = serde_json::from_str(body).map_err(|e| e.to_string())?;
+        let q = v["query"].as_str().unwrap_or("");
+        let reply = if q.contains("user(login") {
+            serde_json::json!({
+                "data": {"user": null, "organization": org_page(0..5, true)},
+                "errors": [{"type": "NOT_FOUND", "message": "Could not resolve to a User"}]
+            })
+        } else if q.contains("organization(login") {
+            let page2 = v["variables"]["after"].as_str() == Some("c1");
+            let page = if page2 {
+                org_page(5..9, false)
+            } else {
+                org_page(0..5, true)
+            };
+            serde_json::json!({"data": {"organization": page}})
+        } else if q.contains("nodes(ids:") {
+            let nodes: Vec<_> = v["variables"]["ids"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|id| {
+                    let i: usize = id.as_str().unwrap()[2..].parse().unwrap();
+                    serde_json::json!({"id": id, "defaultBranchRef": {"target": {
+                        "all": {"totalCount": 100 * (i + 1)},
+                        "y": {"totalCount": 10 * (i + 1)}
+                    }}})
+                })
+                .collect();
+            serde_json::json!({"data": {"nodes": nodes}})
+        } else if q.contains("d0: history") {
+            serde_json::json!({"data": alias_reply(q, |i, _| i as u64 + 1)})
+        } else {
+            // yearly: 2024 → 30·(i+1), 2025 → 50·(i+1)
+            serde_json::json!({"data": alias_reply(q, |i, a| match a {
+                "y2024" => 30 * (i as u64 + 1),
+                "y2025" => 50 * (i as u64 + 1),
+                _ => 0,
+            })})
+        };
+        Ok((200, reply.to_string()))
+    }
+}
+
+struct SharedOrg(Arc<FakeOrg>);
+impl Transport for SharedOrg {
+    fn post(&self, body: &str) -> Result<(u16, String), String> {
+        self.0.post(body)
+    }
+}
+
+fn fake_org() -> (Arc<FakeOrg>, Client) {
+    let fake = Arc::new(FakeOrg {
+        requests: Mutex::new(Vec::new()),
+    });
+    let c = Client::with_transport(Box::new(SharedOrg(fake.clone())));
+    (fake, c)
+}
+
+#[test]
+fn org_is_detected_and_its_calendar_synthesised() {
+    let (fake, c) = fake_org();
+    let date = date!(2026 - 11 - 01);
+    let s = fetch(
+        &c,
+        "acme",
+        date,
+        &FetchOptions::default(),
+        &YearCache::new(),
+    )
+    .unwrap();
+    assert_eq!(s.kind, AccountKind::Org);
+    assert_eq!(s.login, "Acme");
+    assert_eq!(s.account_created, date!(2024 - 03 - 01));
+    assert_eq!(s.public_repos, 9);
+    assert_eq!(s.repos.len(), 9);
+    // detect (+ page 1), page 2, 1 count request, 4 calendar requests (7 top repos, 2 per
+    // request), 1 yearly request
+    assert_eq!(c.queries(), 8);
+    let reqs = fake.requests.lock().unwrap();
+    assert_eq!(reqs.iter().filter(|r| r.contains("d0: history")).count(), 4);
+    assert_eq!(reqs.iter().filter(|r| r.contains("user(login")).count(), 1);
+    drop(reqs);
+    // top 7 non-fork repos by 365-day commits: R_1..R_7 (R_8 is a fork, R_0 the smallest)
+    let r = |id: &str| s.repos.iter().find(|r| r.id == id).unwrap();
+    assert_eq!(r("R_7").commits_total, 800);
+    assert_eq!(r("R_7").commits_365d, 80);
+    assert_eq!((r("R_7").commits_28d, r("R_7").commits_today), (8 * 28, 8));
+    assert_eq!((r("R_0").commits_28d, r("R_0").commits_today), (0, 0));
+    assert!(r("R_0").commits_by_year.is_empty());
+    // calendar: 70 days ending on the date, each the sum over the top repos (2+3+…+8 = 35)
+    assert_eq!(s.calendar.len(), 70);
+    assert_eq!(s.calendar.last().unwrap().date, date);
+    assert!(s.calendar.iter().all(|d| d.count == 35));
+    // yearly: finished years queried, current year = all-time minus finished ones
+    let y = &r("R_1").commits_by_year;
+    assert_eq!((y["2024"], y["2025"], y["2026"]), (60, 100, 200 - 160));
+    assert_eq!(s.years, vec![2024, 2025, 2026]);
+}
+
+#[test]
+fn org_forced_cached_and_young() {
+    let (fake, c) = fake_org();
+    let mut cache = YearCache::new();
+    cache.insert("2024".into(), [("R_1".to_string(), 7u64)].into());
+    cache.insert("2025".into(), BTreeMap::new());
+    let opts = FetchOptions {
+        force_org: true,
+        config: Config {
+            max_branches: 2,
+            ..Config::default()
+        },
+        ..FetchOptions::default()
+    };
+    let s = fetch(&c, "acme", date!(2026 - 11 - 01), &opts, &cache).unwrap();
+    // list p1, list p2, counts, 1 calendar request (2 repos); no detection, no yearly request
+    assert_eq!(c.queries(), 4);
+    assert!(fake
+        .requests
+        .lock()
+        .unwrap()
+        .iter()
+        .all(|r| !r.contains("user(login")));
+    assert!(s.calendar.iter().all(|d| d.count == 8 + 7));
+    let top: Vec<&RepoSignal> = s
+        .repos
+        .iter()
+        .filter(|r| !r.commits_by_year.is_empty())
+        .collect();
+    assert_eq!(top.len(), 2);
+    // a calendar never starts before the org existed
+    let (_, c) = fake_org();
+    let s = fetch(&c, "acme", date!(2024 - 03 - 10), &opts, &YearCache::new()).unwrap();
+    assert_eq!(s.calendar.first().unwrap().date, date!(2024 - 03 - 01));
+    assert_eq!(s.calendar.len(), 10);
+}
+
+#[test]
+fn user_login_is_not_an_org() {
+    // a user answer with an org NOT_FOUND error is data, not a failure
+    let (c, _) = scripted(vec![Ok((
+        200,
+        r#"{"data":{"organization":null,"user":{"login":"octo","createdAt":"2020-01-01T00:00:00Z",
+           "repositories":{"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[]}}},
+           "errors":[{"type":"NOT_FOUND","message":"Could not resolve to an Organization"}]}"#
+            .into(),
+    ))]);
+    assert!(matches!(
+        queries::profile(&c, "octo").unwrap(),
+        queries::Account::User(_)
+    ));
 }

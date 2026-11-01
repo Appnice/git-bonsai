@@ -7,6 +7,15 @@ use time::Date;
 
 time::serde::format_description!(pub ymd, Date, "[year]-[month]-[day]");
 
+/// A GitHub user or organization.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum AccountKind {
+    #[default]
+    User,
+    Org,
+}
+
 /// `YYYY-MM-DD`, for parsing dates outside serde.
 pub const YMD: &[time::format_description::BorrowedFormatItem<'static>] =
     time::macros::format_description!("[year]-[month]-[day]");
@@ -64,6 +73,10 @@ pub struct Snapshot {
     /// listed here with no entry for a repo means 0 commits). Finished ones go to the year cache.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub years: Vec<i32>,
+    /// User or organization. An organization has no contribution calendar: `calendar` is
+    /// synthesised from default-branch commits of its top repos over the last 70 days.
+    #[serde(default)]
+    pub kind: AccountKind,
 }
 
 /// One day of the contribution calendar.

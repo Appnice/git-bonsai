@@ -107,6 +107,9 @@ pub struct TreeState {
     pub history: Vec<HistoryEntry>,
     #[serde(default)]
     pub vitals: Vitals,
+    /// User or organization (layout draws orgs slightly differently).
+    #[serde(default)]
+    pub kind: crate::snapshot::AccountKind,
 }
 
 /// Why a `state.json` cannot be used (exit code 4 in the CLI; the file is never overwritten).
@@ -190,6 +193,29 @@ mod tests {
         let back: TreeState = serde_json::from_str(&serde_json::to_string(&s).unwrap()).unwrap();
         assert_eq!(back, s);
         assert_eq!(load(&to_json(&s)).unwrap(), s);
+    }
+
+    #[test]
+    fn kind_defaults_to_user_and_round_trips() {
+        use crate::snapshot::AccountKind;
+        let json = r#"{"schema": 1, "login": "a", "seed": "0123456789abcdef",
+          "planted": "2020-01-01", "last_grown": null,
+          "trunk": {"height": 8, "girth": 2, "bends": [[0,0]]}, "branches": []}"#;
+        let mut s = load(json).unwrap();
+        assert_eq!(s.kind, AccountKind::User);
+        s.kind = AccountKind::Org;
+        let out = to_json(&s);
+        assert!(out.contains(r#""kind": "org""#));
+        assert_eq!(load(&out).unwrap().kind, AccountKind::Org);
+        let snap: crate::snapshot::Snapshot = serde_json::from_str(
+            r#"{"login":"a","date":"2026-01-02","account_created":"2020-01-01",
+                "public_repos":0,"repos":[],"calendar":[],"kind":"org"}"#,
+        )
+        .unwrap();
+        assert_eq!(snap.kind, AccountKind::Org);
+        let back: crate::snapshot::Snapshot =
+            serde_json::from_str(&serde_json::to_string(&snap).unwrap()).unwrap();
+        assert_eq!(back, snap);
     }
 
     #[test]

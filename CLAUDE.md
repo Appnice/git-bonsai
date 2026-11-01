@@ -13,6 +13,8 @@ board "07 Commit pixels" (`src/board07.txt`, `~/appnice-apps/projects/git-bonsai
 - CLI (offline with `--from-snapshot`): `cargo run -- plant --from-snapshot tests/fixtures/torvalds-2026-10-31.json --state /tmp/b/state.json --out /tmp/b`,
   then `cargo run -- debug --state /tmp/b/state.json`. Live: `snapshot --login L --out s.json -v` (token from
   `--token`/`GITHUB_TOKEN`/`GH_TOKEN`/`gh auth token`; read-only public API). Exit codes 0/2 config/3 API/4 state.
+- Organizations are detected in the first query (`--org` forces it); no contribution calendar, so
+  `github/org.rs` builds a 70-day one from the top repos' default-branch commits (see its header).
 - Features: `network` (github/), `cli` (binary), `gif`; all default. `cargo build --lib --no-default-features` must pass.
 - Screenshots of an SVG (frozen CSS animations at given ms): `node ~/.cache/git-bonsai-tools/shot.js <svg> <outPrefix> [scale] [ms,ms]`.
 

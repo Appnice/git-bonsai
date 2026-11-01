@@ -48,3 +48,19 @@ fn new_account_is_a_sapling() {
     assert!(s.branches.is_empty());
     assert_eq!(s.trunk.height, 8);
 }
+
+#[test]
+fn anthropics_org_is_planted_from_its_synthetic_calendar() {
+    let snap = fixture("anthropics-2026-11-01");
+    assert_eq!(snap.kind, git_bonsai::snapshot::AccountKind::Org);
+    assert_eq!(snap.calendar.len(), 70);
+    let a = plant(&snap, &Config::default()).unwrap();
+    assert_eq!(a.kind, git_bonsai::snapshot::AccountKind::Org);
+    assert_ne!(a.vitals.phase, PhaseKind::Dormant);
+    assert!(!a.branches.is_empty() && a.branches.len() <= 7);
+    assert_eq!(
+        state::to_json(&a),
+        state::to_json(&plant(&snap, &Config::default()).unwrap())
+    );
+    insta::assert_snapshot!("anthropics_planted", state::to_json(&a));
+}
