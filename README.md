@@ -62,6 +62,8 @@ One commit wakes it up.
      schedule:
        - cron: "17 3 * * *"
      workflow_dispatch:
+     push:
+       paths: [.github/workflows/bonsai.yml]
    permissions:
      contents: write
    concurrency: bonsai
@@ -73,8 +75,8 @@ One commit wakes it up.
          - uses: appnice/git-bonsai@v1
    ```
 
-2. Run it once by hand (Actions → Git Bonsai → Run workflow). The first run plants the tree and replays
-   your whole history day by day, so an old account starts with a grown tree.
+2. Commit it. The push runs the workflow once: it plants the tree and replays your whole history day by
+   day, so an old account starts with a grown tree. After that it grows every night.
 
 3. Put it in your `README.md`:
 

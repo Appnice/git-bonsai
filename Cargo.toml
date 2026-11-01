@@ -5,6 +5,10 @@ edition = "2021"
 rust-version = "1.85"
 description = "Pixel bonsai grown from a GitHub account's public activity, one day at a time"
 license = "MIT"
+repository = "https://github.com/appnice/git-bonsai"
+readme = "README.md"
+keywords = ["github", "profile-readme", "pixel-art", "bonsai", "generative-art"]
+categories = ["command-line-utilities", "visualization"]
 publish = false
 
 [features]
