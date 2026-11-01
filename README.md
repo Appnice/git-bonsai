@@ -9,6 +9,10 @@
 
 **A pixel bonsai that grows from your GitHub activity, one day at a time.**
 
+[![GitHub Marketplace](https://img.shields.io/badge/Marketplace-Pixel%20Git%20Bonsai-2ea043?logo=github)](https://github.com/marketplace/actions/pixel-git-bonsai)
+[![Release](https://img.shields.io/github/v/release/appnice/git-bonsai?color=a97bff)](https://github.com/appnice/git-bonsai/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-d29922)](LICENSE)
+
 Every repo is a branch. Every language a colour. Archive a repo and the branch is pruned, leaving a scar
 forever. Keep a 21-day streak and it blooms. Go quiet for two months and it falls asleep.
 One commit wakes it up.
@@ -81,6 +85,7 @@ commits on the default branches of its most active public repos. It gets a celad
 
 2. Commit it. The push runs the workflow once: it plants the tree and replays your whole history day by
    day, so an old account starts with a grown tree. After that it grows every night.
+   You can do all of this in the browser: *Add file → Create new file*.
 
 3. Put it in your `README.md`:
 
@@ -90,6 +95,20 @@ commits on the default branches of its most active public repos. It gets a celad
      <img alt="My Git Bonsai, grown from my GitHub activity" src="bonsai/bonsai-light.svg" width="560">
    </picture>
    ```
+
+On the Marketplace the action is listed as
+[Pixel Git Bonsai](https://github.com/marketplace/actions/pixel-git-bonsai) (the plain name was taken).
+
+### See your tree before you commit
+
+Download the binary for your system from the [latest release](https://github.com/appnice/git-bonsai/releases/latest), then:
+
+```sh
+git-bonsai plant --login <you> --state preview/state.json --out preview
+open preview/bonsai-dark.svg     # or drag it into a browser
+```
+
+It reads public data only, with the token from `gh auth token`, `GITHUB_TOKEN` or `GH_TOKEN`.
 
 ### Action inputs
 
@@ -121,7 +140,8 @@ Kotlin = "#a97bff"          # override a language colour
 
 ## CLI
 
-The same engine as a single binary (`cargo install` or a release download):
+The same engine as a single binary: a [release download](https://github.com/appnice/git-bonsai/releases/latest)
+or `cargo install --git https://github.com/appnice/git-bonsai`.
 
 ```
 git-bonsai grow     --login L [--state bonsai/state.json] [--out bonsai]   # fetch, grow missing days, render
@@ -133,11 +153,28 @@ git-bonsai debug    --state S                                              # the
 
 Token: `GITHUB_TOKEN`, `GH_TOKEN` or `gh auth token`. It is never logged or stored.
 
+## FAQ
+
+**Will the nightly commit flood my contribution graph?** No. The action commits as
+`github-actions[bot]`, which doesn't count as your contribution, and only when the tree changed.
+
+**Do private repos count?** No. The action reads public data only, so private repos never grow a branch,
+and a repo you make private is pruned like a deleted one.
+
+**I renamed or archived a repo.** An archived or deleted repo is pruned and leaves a scar. A rename keeps
+its branch.
+
+**Can I start over?** Delete `bonsai/state.json` and run the workflow by hand (*Actions → Git Bonsai →
+Run workflow*). The same login grows the same tree again.
+
+**Will it work outside GitHub?** Set `gif: true` to also get `bonsai/bonsai.gif`, which works on sites that
+don't show SVG, like LinkedIn or Slack.
+
 ## Under the hood
 
 `fetch → snapshot → grow → layout → render`. Only `fetch` touches the network; everything else is a pure
 function, so the image is always a function of the state. Rust, no image libraries: the SVG is written by
-hand (rects, one `<use>` per cell, CSS), ~70 KB for a full tree. Golden tests pin every pixel; a property
+hand (`<rect>` per tree cell, a shared `<use>` per empty day, CSS), ~70 KB for a full tree. Golden tests pin every pixel; a property
 test lays out a thousand random trees without a single overlapping pad.
 
 ## License
