@@ -57,12 +57,14 @@ fn svg_is_small_and_stable() {
     let a = render(Phase::Bloom { streak_days: 23 }, Theme::Dark);
     assert!(a.len() < 120 * 1024, "{} bytes", a.len());
     assert_eq!(a, render(Phase::Bloom { streak_days: 23 }, Theme::Dark));
-    assert_eq!(
-        a.matches("<use href=\"#q\" x").count()
-            - a.matches("class=\"sh").count()
-            - a.matches("class=\"fr").count(),
-        36 * 34
-    );
+    // Every grid cell is drawn once: empty days as `<use>`, the rest as 12 px rects.
+    let uses = a.matches(r##"<use href="#q" x"##).count()
+        - a.matches(r#"class="sh"#).count()
+        - a.matches(r#"class="fr"#).count();
+    let cells = a
+        .matches(r#" width="12" height="12" rx="3" class="#)
+        .count();
+    assert_eq!(uses + cells, 36 * 34);
 }
 
 #[test]
