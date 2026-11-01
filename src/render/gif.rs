@@ -94,14 +94,30 @@ fn frame(scene: &Scene, theme: Theme, progress: f64, dist: &[Option<u32>], max_d
     let badge = h.phase.badge();
     let badge_w = font::width(&badge) as i32 * 2 + 20;
     let badge_x = (WIDTH - PAD) as i32 - badge_w;
-    let room = badge_x - PAD as i32 - 16;
+    let is_org = h.kind == crate::snapshot::AccountKind::Org;
+    let tag_w = font::width("org") as i32 * 2 + 12;
+    let room = badge_x - PAD as i32 - 16 - if is_org { tag_w + 10 } else { 0 };
     let scale = (room / font::width(&h.login).max(1) as i32).clamp(1, 3);
-    r.text(&h.login, PAD as i32, 40 + (3 - scale) * 7, scale, t.fg);
+    let title_y = 40 + (3 - scale) * 7;
+    r.text(&h.login, PAD as i32, title_y, scale, t.fg);
+    if is_org {
+        let tx = PAD as i32 + font::width(&h.login) as i32 * scale + 10;
+        let ty = title_y + 7 * scale - 20;
+        r.rect(tx, ty, tag_w, 20, t.muted, true);
+        r.rect(tx + 2, ty + 2, tag_w - 4, 16, t.bg, false);
+        r.text("org", tx + 6, ty + 3, 2, t.muted);
+    }
+    let stats = h.stats();
+    let stats_scale = if (font::width(&stats) as i32) * 2 <= badge_x - PAD as i32 - 12 {
+        2
+    } else {
+        1
+    };
     r.text(
-        &format!("{} commits · {}y", h.commits, h.age_years),
+        &stats,
         PAD as i32,
-        70,
-        2,
+        70 + (2 - stats_scale) * 7,
+        stats_scale,
         t.muted,
     );
 
@@ -137,7 +153,7 @@ fn frame(scene: &Scene, theme: Theme, progress: f64, dist: &[Option<u32>], max_d
             (GRID_Y + y as u32 * STEP) as i32,
             CELL as i32,
             CELL as i32,
-            cell_color(role, &t, &scene.langs),
+            cell_color(role, &t, &scene.langs, scene.glaze),
             true,
         );
     }

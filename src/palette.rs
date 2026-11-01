@@ -161,8 +161,27 @@ pub mod fixed {
     pub const BADGE_FG: Rgb = Rgb::hex(0x0d1117);
 }
 
+/// The pot's glaze: terracotta for a person, celadon for an organization.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum PotGlaze {
+    #[default]
+    Terracotta,
+    Celadon,
+}
+
+impl PotGlaze {
+    /// Rim, body and lower-edge colours.
+    pub fn colors(self) -> [Rgb; 3] {
+        match self {
+            PotGlaze::Terracotta => [fixed::POT_RIM, fixed::POT_BODY, fixed::POT_DARK],
+            PotGlaze::Celadon => [Rgb::hex(0x7fb5ad), Rgb::hex(0x5b928c), Rgb::hex(0x3d6965)],
+        }
+    }
+}
+
 /// The colour of a cell. Leaves of a language with no palette fall back to the empty colour.
-pub fn cell_color(role: Role, theme: &ThemeColors, langs: &[LangPalette]) -> Rgb {
+pub fn cell_color(role: Role, theme: &ThemeColors, langs: &[LangPalette], glaze: PotGlaze) -> Rgb {
+    let [rim, body, dark] = glaze.colors();
     match role {
         Role::Empty => theme.empty,
         Role::Trunk(Shade::Base) | Role::Branch => fixed::TRUNK,
@@ -176,9 +195,9 @@ pub fn cell_color(role: Role, theme: &ThemeColors, langs: &[LangPalette]) -> Rgb
         Role::Fallen => fixed::FALLEN,
         Role::Soil => fixed::SOIL,
         Role::Moss => fixed::MOSS,
-        Role::Pot(PotPart::Rim) => fixed::POT_RIM,
-        Role::Pot(PotPart::Body) => fixed::POT_BODY,
-        Role::Pot(PotPart::Dark) => fixed::POT_DARK,
+        Role::Pot(PotPart::Rim) => rim,
+        Role::Pot(PotPart::Body) => body,
+        Role::Pot(PotPart::Dark) => dark,
         Role::Ghost => theme.ghost,
     }
 }

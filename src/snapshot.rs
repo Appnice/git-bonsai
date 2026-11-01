@@ -7,6 +7,15 @@ use time::Date;
 
 time::serde::format_description!(pub ymd, Date, "[year]-[month]-[day]");
 
+/// A person's account or an organization (no contribution calendar of its own).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum AccountKind {
+    #[default]
+    User,
+    Org,
+}
+
 /// `YYYY-MM-DD`, for parsing dates outside serde.
 pub const YMD: &[time::format_description::BorrowedFormatItem<'static>] =
     time::macros::format_description!("[year]-[month]-[day]");

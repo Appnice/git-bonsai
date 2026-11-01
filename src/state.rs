@@ -1,7 +1,7 @@
 //! The tree's memory: `bonsai/state.json` in the profile repo, the only source of the tree's shape.
 //! The image is always a function of this state.
 
-use crate::snapshot::ymd;
+use crate::snapshot::{ymd, AccountKind};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use time::Date;
@@ -91,6 +91,9 @@ pub struct Vitals {
 pub struct TreeState {
     pub schema: u32,
     pub login: String,
+    /// User or organization; organizations get a celadon pot and an ORG tag.
+    #[serde(default)]
+    pub kind: AccountKind,
     /// 16 hex chars: first 8 bytes of `sha256(login + planted)`.
     pub seed: String,
     #[serde(with = "ymd")]

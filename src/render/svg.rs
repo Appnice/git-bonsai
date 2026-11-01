@@ -247,7 +247,10 @@ pub fn render(scene: &Scene, opts: &SvgOptions) -> String {
     let badge_px = 2.0;
     let badge_w = font::width(&badge) as f64 * badge_px + 20.0;
     let badge_x = f64::from(WIDTH - PAD) - badge_w;
-    let title_room = badge_x - f64::from(PAD) - 16.0;
+    let is_org = h.kind == crate::snapshot::AccountKind::Org;
+    // Organizations carry an outlined ORG tag after the name.
+    let tag_w = font::width("org") as f64 * 2.0 + 12.0;
+    let title_room = badge_x - f64::from(PAD) - 16.0 - if is_org { tag_w + 10.0 } else { 0.0 };
     let title_w = font::width(&h.login).max(1) as f64;
     let title_px = ((title_room / title_w).clamp(1.0, 3.0) * 4.0).floor() / 4.0;
     let title_y = 40.0 + (3.0 - title_px) * 7.0;
@@ -264,15 +267,48 @@ pub fn render(scene: &Scene, opts: &SvgOptions) -> String {
             }
         },
     ));
-    let stats = format!("{} commits · {}y", h.commits, h.age_years);
+    if is_org {
+        let tx = f64::from(PAD) + title_w * title_px + 10.0;
+        let ty = title_y + 7.0 * title_px - 20.0;
+        let anim = if anim {
+            format!(
+                r#" class="fi {}""#,
+                delays.class(100 + font::width(&h.login) as u32 / 6 * 45)
+            )
+        } else {
+            String::new()
+        };
+        let _ = write!(
+            body,
+            r#"<g{anim}><rect x="{}" y="{}" width="{}" height="20" rx="3" fill="none" stroke="{}" stroke-width="1.5"/>"#,
+            num(tx + 0.75),
+            num(ty + 0.75),
+            num(tag_w - 1.5),
+            t.muted
+        );
+        let tag_fill = format!(r#" class="mu""#);
+        body.push_str(&pixel_text("org", tx + 6.0, ty + 3.0, 2.0, &mut |_| {
+            tag_fill.clone()
+        }));
+        body.push_str("</g>");
+    }
+    let stats = h.stats();
     let stats_class = if anim {
         format!(r#" class="mu fi {}""#, delays.class(600))
     } else {
         r#" class="mu""#.into()
     };
-    body.push_str(&pixel_text(&stats, f64::from(PAD), 70.0, 2.0, &mut |_| {
-        stats_class.clone()
-    }));
+    // The stats line shrinks to stay clear of the badge.
+    let stats_room = badge_x - f64::from(PAD) - 12.0;
+    let stats_px =
+        ((stats_room / font::width(&stats).max(1) as f64).clamp(1.0, 2.0) * 4.0).floor() / 4.0;
+    body.push_str(&pixel_text(
+        &stats,
+        f64::from(PAD),
+        70.0 + (2.0 - stats_px) * 7.0,
+        stats_px,
+        &mut |_| stats_class.clone(),
+    ));
     let (badge_bg, badge_fg) = match h.phase {
         Phase::Bloom { .. } => (fixed::BLOSSOM, fixed::BADGE_FG),
         Phase::Growing | Phase::Sapling => (fixed::MOSS, fixed::BADGE_FG),
@@ -311,7 +347,7 @@ pub fn render(scene: &Scene, opts: &SvgOptions) -> String {
     let mut blossoms = 0u32;
     let mut fallen = 0u32;
     for (x, y, role) in scene.grid.iter() {
-        let c = cls.of(cell_color(role, &t, &scene.langs));
+        let c = cls.of(cell_color(role, &t, &scene.langs, scene.glaze));
         let (px, py) = (x as u32 * STEP, y as u32 * STEP);
         let mut class = format!("c{c}");
         let mut extra = String::new();

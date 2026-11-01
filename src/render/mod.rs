@@ -7,7 +7,8 @@ pub mod gif;
 pub mod svg;
 
 use crate::grid::{Grid, LangId};
-use crate::palette::LangPalette;
+use crate::palette::{LangPalette, PotGlaze};
+use crate::snapshot::AccountKind;
 
 /// The tree's phase, computed daily from the data (never accumulated in the state).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -44,6 +45,23 @@ pub struct Header {
     pub commits: u64,
     pub age_years: u32,
     pub phase: Phase,
+    /// User or organization (an organization gets an ORG tag and its repo count).
+    pub kind: AccountKind,
+    /// Public repos, shown for organizations.
+    pub repos: u32,
+}
+
+impl Header {
+    /// The stats line under the login.
+    pub fn stats(&self) -> String {
+        match self.kind {
+            AccountKind::User => format!("{} commits · {}y", self.commits, self.age_years),
+            AccountKind::Org => format!(
+                "{} commits · {} repos · {}y",
+                self.commits, self.repos, self.age_years
+            ),
+        }
+    }
 }
 
 /// One line of the legend under the tree.
@@ -71,4 +89,5 @@ pub struct Scene {
     pub legend: Vec<LegendItem>,
     /// Cells that grew on the last grown day `(x, y)`; they pulse in the animated image.
     pub fresh: Vec<(usize, usize)>,
+    pub glaze: PotGlaze,
 }

@@ -40,6 +40,8 @@ pub fn board_scene(phase: Phase) -> Scene {
             commits: 4812,
             age_years: 10,
             phase,
+            kind: Default::default(),
+            repos: 41,
         },
         legend: vec![
             LegendItem::Branch {
@@ -66,5 +68,6 @@ pub fn board_scene(phase: Phase) -> Scene {
         ],
         // The tips of the right and left branches grew today.
         fresh: vec![(35, 11), (34, 11), (0, 13), (0, 14)],
+        glaze: Default::default(),
     }
 }

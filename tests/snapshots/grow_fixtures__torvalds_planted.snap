@@ -1,11 +1,11 @@
 ---
 source: tests/grow_fixtures.rs
-assertion_line: 25
 expression: "state::to_json(&a)"
 ---
 {
   "schema": 1,
   "login": "torvalds",
+  "kind": "user",
   "seed": "f3097657c581d9c3",
   "planted": "2011-09-03",
   "last_grown": "2026-10-31",

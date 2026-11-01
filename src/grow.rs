@@ -113,6 +113,7 @@ pub fn plant(snapshot: &Snapshot, cfg: &Config) -> Result<TreeState, GrowError> 
     }
     let seed = rules::seed(&snapshot.login, planted);
     let mut state = TreeState {
+        kind: Default::default(),
         schema: SCHEMA,
         login: snapshot.login.clone(),
         trunk: Trunk {
@@ -647,6 +648,7 @@ mod tests {
     fn seedling(planted: Date, last: Date) -> TreeState {
         let seed = rules::seed("octo", planted);
         TreeState {
+            kind: Default::default(),
             schema: SCHEMA,
             login: "octo".into(),
             trunk: Trunk {

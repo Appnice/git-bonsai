@@ -4,6 +4,7 @@ use proptest::prelude::*;
 
 fn state_with(branches: Vec<Branch>, height: u32, girth: u32, bends: Vec<[i32; 2]>) -> TreeState {
     TreeState {
+        kind: Default::default(),
         schema: 1,
         login: "x".into(),
         seed: "0123456789abcdef".into(),

@@ -5,7 +5,7 @@
 //! name, so the same state always gives the same grid.
 
 use crate::grid::{Grid, LangId, PotPart, Role, Shade, GRID_H, GRID_W, MAX_LANGS};
-use crate::palette::{LangPalette, Rgb};
+use crate::palette::{LangPalette, PotGlaze, Rgb};
 use crate::render::{Header, LegendItem, Phase, Scene};
 use crate::state::{Branch, PhaseKind, Side, TreeState};
 use rand_chacha::rand_core::{RngCore, SeedableRng};
@@ -694,9 +694,15 @@ pub fn build_scene(state: &TreeState) -> Scene {
             commits: v.commits_total,
             age_years,
             phase: phase_of(state),
+            kind: state.kind,
+            repos: v.public_repos,
         },
         legend,
         fresh,
+        glaze: match state.kind {
+            crate::snapshot::AccountKind::User => PotGlaze::Terracotta,
+            crate::snapshot::AccountKind::Org => PotGlaze::Celadon,
+        },
     }
 }
 
