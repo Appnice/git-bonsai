@@ -1,0 +1,100 @@
+name: Git Bonsai
+description: Grow a pixel bonsai from your GitHub activity, one day at a time, and keep it in your profile README.
+author: appnice
+branding:
+  icon: git-branch
+  color: green
+
+inputs:
+  login:
+    description: Account the tree grows from
+    default: ${{ github.repository_owner }}
+  token:
+    description: Token for reading public data
+    default: ${{ github.token }}
+  output-dir:
+    description: Where state.json and the images go
+    default: bonsai
+  themes:
+    description: Variants to render (dark,light)
+    default: dark,light
+  animate:
+    description: CSS animation in the SVG
+    default: "true"
+  gif:
+    description: Also write bonsai.gif
+    default: "false"
+  max-branches:
+    description: Branch limit
+    default: "7"
+  exclude:
+    description: Repos to skip (comma-separated globs)
+    default: ""
+  commit-message:
+    description: Commit message ({date} is replaced)
+    default: "chore(bonsai): grow {date}"
+
+runs:
+  using: composite
+  steps:
+    - name: Download git-bonsai
+      shell: bash
+      env:
+        ACTION_REPO: ${{ github.action_repository }}
+        ACTION_REF: ${{ github.action_ref }}
+        RUNNER_OS_: ${{ runner.os }}
+        RUNNER_ARCH_: ${{ runner.arch }}
+      run: |
+        set -euo pipefail
+        case "$RUNNER_OS_-$RUNNER_ARCH_" in
+          Linux-X64)   target=x86_64-unknown-linux-musl ;;
+          Linux-ARM64) target=aarch64-unknown-linux-musl ;;
+          macOS-X64)   target=x86_64-apple-darwin ;;
+          macOS-ARM64) target=aarch64-apple-darwin ;;
+          Windows-X64) target=x86_64-pc-windows-gnu ;;
+          *) echo "::error::git-bonsai has no build for $RUNNER_OS_ $RUNNER_ARCH_"; exit 1 ;;
+        esac
+        ext=tar.gz; [ "$RUNNER_OS_" = Windows ] && ext=zip
+        asset="git-bonsai-$target.$ext"
+        base="https://github.com/$ACTION_REPO/releases/download/$ACTION_REF"
+        dir="$RUNNER_TEMP/git-bonsai"; mkdir -p "$dir"; cd "$dir"
+        curl -fsSL --retry 3 -o "$asset" "$base/$asset"
+        curl -fsSL --retry 3 -o "$asset.sha256" "$base/$asset.sha256"
+        expected=$(cut -d' ' -f1 "$asset.sha256")
+        if command -v sha256sum >/dev/null; then actual=$(sha256sum "$asset" | cut -d' ' -f1); else actual=$(shasum -a 256 "$asset" | cut -d' ' -f1); fi
+        [ "$expected" = "$actual" ] || { echo "::error::checksum mismatch for $asset"; exit 1; }
+        if [ "$ext" = zip ]; then unzip -oq "$asset"; else tar xzf "$asset"; fi
+        echo "$dir" >> "$GITHUB_PATH"
+
+    - name: Grow
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+        IN_LOGIN: ${{ inputs.login }}
+        IN_OUT: ${{ inputs.output-dir }}
+        IN_THEMES: ${{ inputs.themes }}
+        IN_ANIMATE: ${{ inputs.animate }}
+        IN_GIF: ${{ inputs.gif }}
+        IN_MAX: ${{ inputs.max-branches }}
+        IN_EXCLUDE: ${{ inputs.exclude }}
+      run: |
+        set -euo pipefail
+        args=(grow --login "$IN_LOGIN" --state "$IN_OUT/state.json" --out "$IN_OUT" --themes "$IN_THEMES" --max-branches "$IN_MAX")
+        [ "$IN_ANIMATE" = "true" ] || args+=(--no-animate)
+        [ "$IN_GIF" = "true" ] && args+=(--gif)
+        [ -n "$IN_EXCLUDE" ] && args+=(--exclude "$IN_EXCLUDE")
+        git-bonsai "${args[@]}"
+
+    - name: Commit
+      shell: bash
+      env:
+        IN_OUT: ${{ inputs.output-dir }}
+        IN_MSG: ${{ inputs.commit-message }}
+      run: |
+        set -euo pipefail
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add -- "$IN_OUT"
+        if git diff --cached --quiet; then echo "Tree unchanged."; exit 0; fi
+        git commit -m "${IN_MSG//\{date\}/$(date -u +%F)}"
+        git push

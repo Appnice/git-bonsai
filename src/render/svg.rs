@@ -459,7 +459,7 @@ pub fn render(scene: &Scene, opts: &SvgOptions) -> String {
                 let p = scene.langs.get(usize::from(*lang));
                 let sw: Vec<Rgb> = [1u8, 3, 4]
                     .iter()
-                    .map(|l| p.map_or(t.empty, |p| p.level(*l)))
+                    .map(|l| p.map_or(t.empty, |p| crate::palette::legible(p.level(*l), t.empty)))
                     .collect();
                 (sw, format!("{repo} · {language} · {commits}"), false)
             }

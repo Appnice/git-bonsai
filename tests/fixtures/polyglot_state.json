@@ -1,0 +1,22 @@
+{
+  "schema": 1, "login": "kernel-kat", "seed": "c4f1a9e27b3d5068",
+  "planted": "2012-02-20", "last_grown": "2026-07-14",
+  "trunk": { "height": 24, "girth": 5, "bends": [[0,0],[5,2],[10,-1],[16,1],[22,-1]] },
+  "branches": [
+    { "repo_id": "R_go", "name": "meshd", "lang": "Go", "color": "#00add8",
+      "anchor": 4, "side": "left", "length": 7, "pad": 4, "commits_total": 1830, "pruned": null },
+    { "repo_id": "R_c", "name": "tinyvm", "lang": "C", "color": "#555555",
+      "anchor": 7, "side": "right", "length": 7, "pad": 4, "commits_total": 960, "pruned": null },
+    { "repo_id": "R_zig", "name": "zigfetch", "lang": "Zig", "color": "#ec915c",
+      "anchor": 11, "side": "left", "length": 6, "pad": 3, "commits_total": 410, "pruned": null },
+    { "repo_id": "R_ex", "name": "beam-kv", "lang": "Elixir", "color": "#6e4a7e",
+      "anchor": 14, "side": "right", "length": 5, "pad": 3, "commits_total": 520, "pruned": null },
+    { "repo_id": "R_hs", "name": "lambda-lab", "lang": "Haskell", "color": "#5e5086",
+      "anchor": 2, "side": "right", "length": 3, "pad": 0, "commits_total": 300, "pruned": "2023-03-01" },
+    { "repo_id": "R_rs", "name": "crabdb", "lang": "Rust", "color": "#dea584",
+      "anchor": 23, "side": "left", "length": 2, "pad": 6, "commits_total": 3120, "pruned": null }
+  ],
+  "vitals": { "phase": "growing", "streak_days": 9, "commits_total": 9840, "stars_total": 4200,
+              "public_repos": 88, "activity_28d": { "R_rs": 80, "R_go": 22, "R_c": 4, "R_zig": 12, "R_ex": 1 },
+              "grew": { "R_rs": 1, "R_go": 1 } }
+}

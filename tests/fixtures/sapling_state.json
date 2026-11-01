@@ -1,0 +1,13 @@
+{
+  "schema": 1, "login": "new-sprout", "seed": "3b7e19c04d2a8f61",
+  "planted": "2026-10-05", "last_grown": "2026-10-31",
+  "trunk": { "height": 8, "girth": 2, "bends": [[0,0],[5,1]] },
+  "branches": [
+    { "repo_id": "R_dots", "name": "dotfiles", "lang": "Shell", "color": "#89e051",
+      "anchor": 7, "side": "right", "length": 2, "pad": 1, "commits_total": 9, "pruned": null },
+    { "repo_id": "R_hello", "name": "hello-web", "lang": "TypeScript", "color": "#3178c6",
+      "anchor": 4, "side": "left", "length": 3, "pad": 1, "commits_total": 6, "pruned": null }
+  ],
+  "vitals": { "phase": "sapling", "commits_total": 15, "stars_total": 0, "public_repos": 2,
+              "activity_28d": { "R_dots": 9, "R_hello": 6 }, "grew": { "R_hello": 1 } }
+}

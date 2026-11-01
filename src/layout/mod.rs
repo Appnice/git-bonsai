@@ -245,6 +245,8 @@ fn draw_trunk(c: &mut Canvas, t: &TrunkShape) {
 
 /// A placed branch: its cells (trunk side first) and, unless pruned, its pad.
 struct Placed {
+    /// The side it was drawn on (the state's side, unless only the other side had room).
+    side: Side,
     cells: Vec<(i32, i32)>,
     pad: Option<Pad>,
     scar: bool,
@@ -338,6 +340,7 @@ fn place_branches(state: &TreeState, t: &TrunkShape, apex: Option<usize>) -> Vec
             });
             taken.push(pad);
             placed[i] = Some(Placed {
+                side: b.side,
                 cells: Vec::new(),
                 pad: Some(pad),
                 scar: false,
@@ -350,6 +353,7 @@ fn place_branches(state: &TreeState, t: &TrunkShape, apex: Option<usize>) -> Vec
         if b.pruned.is_some() {
             let cells = branch_path(start, b.side, 3, rise_every, 0);
             placed[i] = Some(Placed {
+                side: b.side,
                 cells,
                 pad: None,
                 scar: true,
@@ -379,24 +383,35 @@ fn place_branches(state: &TreeState, t: &TrunkShape, apex: Option<usize>) -> Vec
         let (mut rx, mut ry) = pad_radii(b.pad);
         let base_len = (b.length as i32).max(2);
         'shrink: loop {
-            for (dl, lift) in MOVES {
-                let cells = branch_path(start, b.side, base_len + dl, rise_every, lift);
-                let tip = *cells.last().unwrap_or(&start);
-                let pad = clamp_pad(pad_for(tip, b.side, rx, ry));
-                if pad.fits() && !taken.iter().any(|p| p.overlaps(&pad)) {
-                    taken.push(pad);
-                    placed[i] = Some(Placed {
-                        cells,
-                        pad: Some(pad),
-                        scar: false,
-                    });
-                    break 'shrink;
+            let other = if b.side == Side::Left {
+                Side::Right
+            } else {
+                Side::Left
+            };
+            // The state's side first; the other side before giving up size.
+            for side in [b.side, other] {
+                let start = t.edge(anchor, side);
+                for (dl, lift) in MOVES {
+                    let cells = branch_path(start, side, base_len + dl, rise_every, lift);
+                    let tip = *cells.last().unwrap_or(&start);
+                    let pad = clamp_pad(pad_for(tip, side, rx, ry));
+                    if pad.fits() && !taken.iter().any(|p| p.overlaps(&pad)) {
+                        taken.push(pad);
+                        placed[i] = Some(Placed {
+                            side,
+                            cells,
+                            pad: Some(pad),
+                            scar: false,
+                        });
+                        break 'shrink;
+                    }
                 }
             }
             if rx <= 2 && ry <= 1 {
                 // No room at all: a bare branch.
                 let cells = branch_path(start, b.side, base_len, rise_every, 0);
                 placed[i] = Some(Placed {
+                    side: b.side,
                     cells,
                     pad: None,
                     scar: false,
@@ -557,7 +572,7 @@ pub fn build_scene(state: &TreeState) -> Scene {
         if grew > 0 {
             let tips = p.cells.iter().rev().take(grew);
             fresh.extend(tips.map(|(x, y)| (*x as usize, *y as usize)));
-            let edge_x = if b.side == Side::Left {
+            let edge_x = if p.side == Side::Left {
                 pad.cx - pad.rx
             } else {
                 pad.cx + pad.rx

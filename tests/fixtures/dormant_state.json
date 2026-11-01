@@ -1,0 +1,17 @@
+{
+  "schema": 1, "login": "quiet-oak", "seed": "81d0e5b3a7c42f96",
+  "planted": "2014-09-01", "last_grown": "2026-10-31",
+  "trunk": { "height": 18, "girth": 4, "bends": [[0,0],[6,-2],[12,0]] },
+  "branches": [
+    { "repo_id": "R_a", "name": "rails-blog", "lang": "Ruby", "color": "#701516",
+      "anchor": 6, "side": "right", "length": 6, "pad": 4, "commits_total": 700, "pruned": null },
+    { "repo_id": "R_b", "name": "jquery-tabs", "lang": "JavaScript", "color": "#f1e05a",
+      "anchor": 3, "side": "left", "length": 3, "pad": 0, "commits_total": 210, "pruned": "2021-06-10" },
+    { "repo_id": "R_c", "name": "php-cms", "lang": "PHP", "color": "#4f5d95",
+      "anchor": 9, "side": "left", "length": 3, "pad": 0, "commits_total": 380, "pruned": "2022-01-15" },
+    { "repo_id": "R_d", "name": "notes", "lang": "Markdown", "color": "#083fa1",
+      "anchor": 17, "side": "right", "length": 2, "pad": 5, "commits_total": 900, "pruned": null }
+  ],
+  "vitals": { "phase": "dormant", "idle_days": 97, "commits_total": 2210, "stars_total": 120,
+              "public_repos": 23, "activity_28d": {}, "grew": {} }
+}

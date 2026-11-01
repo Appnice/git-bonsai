@@ -161,7 +161,7 @@ pub fn cell_color(role: Role, theme: &ThemeColors, langs: &[LangPalette]) -> Rgb
         Role::Trunk(Shade::Shadow) => theme.trunk_shadow,
         Role::Leaf { lang, level } => langs
             .get(usize::from(lang))
-            .map_or(theme.empty, |p| p.level(level)),
+            .map_or(theme.empty, |p| legible(p.level(level), theme.empty)),
         Role::Blossom => fixed::BLOSSOM,
         Role::Scar => fixed::SCAR,
         Role::Fallen => fixed::FALLEN,
@@ -172,6 +172,26 @@ pub fn cell_color(role: Role, theme: &ThemeColors, langs: &[LangPalette]) -> Rgb
         Role::Pot(PotPart::Dark) => fixed::POT_DARK,
         Role::Ghost => theme.ghost,
     }
+}
+
+/// Minimum OKLCH lightness gap between a leaf and an empty day.
+const MIN_LIGHTNESS_GAP: f64 = 0.16;
+
+/// Moves a colour's lightness away from the empty-day colour until the gap is at least
+/// [`MIN_LIGHTNESS_GAP`], keeping hue and chroma (dark languages on the dark theme, pale ones on
+/// the light theme).
+pub fn legible(c: Rgb, empty: Rgb) -> Rgb {
+    let (l, ch, h) = to_oklch(c);
+    let (le, _, _) = to_oklch(empty);
+    if (l - le).abs() >= MIN_LIGHTNESS_GAP {
+        return c;
+    }
+    let target = if le < 0.5 {
+        le + MIN_LIGHTNESS_GAP
+    } else {
+        le - MIN_LIGHTNESS_GAP
+    };
+    from_oklch(target, ch, h)
 }
 
 // --- OKLCH (Björn Ottosson's OKLab) ---
@@ -262,6 +282,19 @@ mod tests {
                 assert!(a.abs_diff(b) <= 1, "{c} -> {back}");
             }
         }
+    }
+
+    #[test]
+    fn dark_languages_are_lifted_on_the_dark_theme() {
+        let empty = Theme::Dark.colors().empty;
+        let c = legible(Rgb::hex(0x24292e), empty);
+        assert!(to_oklch(c).0 - to_oklch(empty).0 >= MIN_LIGHTNESS_GAP - 0.01);
+        let bright = Rgb::hex(0xdea584);
+        assert_eq!(legible(bright, empty), bright);
+        let pale = legible(Rgb::hex(0xf1e05a), Theme::Light.colors().empty);
+        assert!(
+            to_oklch(Theme::Light.colors().empty).0 - to_oklch(pale).0 >= MIN_LIGHTNESS_GAP - 0.01
+        );
     }
 
     #[test]

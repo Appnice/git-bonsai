@@ -71,6 +71,7 @@ pub enum PhaseKind {
 /// Facts of the last grown day the image needs (phase, colours, pot, moss). Recomputed every day,
 /// never accumulated: only the shape (`trunk`, `branches`) is.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(default)]
 pub struct Vitals {
     pub phase: PhaseKind,
     pub streak_days: u32,

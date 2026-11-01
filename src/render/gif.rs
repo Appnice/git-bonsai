@@ -165,7 +165,9 @@ fn frame(scene: &Scene, theme: Theme, progress: f64, dist: &[Option<u32>], max_d
                     (
                         [1u8, 3, 4]
                             .iter()
-                            .map(|l| p.map_or(t.empty, |p| p.level(*l)))
+                            .map(|l| {
+                                p.map_or(t.empty, |p| crate::palette::legible(p.level(*l), t.empty))
+                            })
                             .collect(),
                         format!("{repo} · {language} · {commits}"),
                         false,
