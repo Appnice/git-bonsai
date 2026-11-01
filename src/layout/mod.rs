@@ -530,11 +530,6 @@ pub fn build_scene(state: &TreeState) -> Scene {
         for (x, y) in &p.cells {
             c.set(*x, *y, Role::Branch);
         }
-        if p.scar {
-            if let Some((x, y)) = p.cells.last() {
-                c.set(*x, *y, Role::Scar);
-            }
-        }
     }
     let mut fresh: Vec<(usize, usize)> = Vec::new();
     let order: Vec<usize> = {
@@ -584,6 +579,18 @@ pub fn build_scene(state: &TreeState) -> Scene {
             }
         }
         pads_drawn.push((pad, lang));
+    }
+
+    // Pruned stubs and their scars stay visible over the pads: a scar is forever.
+    for p in placed.iter().filter(|p| p.scar) {
+        for (k, (x, y)) in p.cells.iter().enumerate() {
+            let role = if k + 1 == p.cells.len() {
+                Role::Scar
+            } else {
+                Role::Branch
+            };
+            c.set(*x, *y, role);
+        }
     }
 
     // Blossoms in bloom: 3–8 cells in the upper rows of the pads.

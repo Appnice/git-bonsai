@@ -39,8 +39,17 @@ pub struct LangPalette {
 impl LangPalette {
     /// Shades derived from a linguist colour (RFC: the linguist colour is level 2; levels 1/3/4 are
     /// lightness +0.12 / -0.10 / -0.20 in OKLCH at the same hue, chroma reduced until in gamut).
+    ///
+    /// Near-grey colours (C `#555555`, …) would make a dead-looking tree, so below
+    /// [`MIN_LEAF_CHROMA`] the hue turns to sage green at that chroma, lightness kept.
     pub fn from_linguist(base: Rgb) -> LangPalette {
         let (l, c, h) = to_oklch(base);
+        let (c, h, base) = if c < MIN_LEAF_CHROMA {
+            let tinted = from_oklch(l, SAGE_CHROMA, SAGE_HUE);
+            (SAGE_CHROMA, SAGE_HUE, tinted)
+        } else {
+            (c, h, base)
+        };
         let shade = |dl: f64| from_oklch((l + dl).clamp(0.0, 1.0), c, h);
         LangPalette {
             levels: [shade(0.12), base, shade(-0.10), shade(-0.20)],
@@ -174,6 +183,13 @@ pub fn cell_color(role: Role, theme: &ThemeColors, langs: &[LangPalette]) -> Rgb
     }
 }
 
+/// Chroma below which a language colour counts as grey and gets the sage tint.
+const MIN_LEAF_CHROMA: f64 = 0.06;
+/// OKLCH chroma of the sage tint.
+const SAGE_CHROMA: f64 = 0.085;
+/// OKLCH hue of the sage tint (radians, ≈ 140°).
+const SAGE_HUE: f64 = 2.44;
+
 /// Minimum OKLCH lightness gap between a leaf and an empty day.
 const MIN_LIGHTNESS_GAP: f64 = 0.16;
 
@@ -282,6 +298,15 @@ mod tests {
                 assert!(a.abs_diff(b) <= 1, "{c} -> {back}");
             }
         }
+    }
+
+    #[test]
+    fn grey_languages_turn_sage() {
+        let p = LangPalette::from_linguist(Rgb::hex(0x555555));
+        let (_, c, h) = to_oklch(p.level(2));
+        assert!(c > 0.04 && (h - SAGE_HUE).abs() < 0.2, "{c} {h}");
+        let rust = Rgb::hex(0xdea584);
+        assert_eq!(LangPalette::from_linguist(rust).level(2), rust);
     }
 
     #[test]
