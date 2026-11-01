@@ -3,7 +3,13 @@ use git_bonsai::render::{ascii, svg};
 use git_bonsai::{Phase, Theme};
 
 fn render(phase: Phase, theme: Theme) -> String {
-    svg::render(&board_scene(phase), &svg::SvgOptions { theme })
+    svg::render(
+        &board_scene(phase),
+        &svg::SvgOptions {
+            theme,
+            animate: false,
+        },
+    )
 }
 
 #[test]

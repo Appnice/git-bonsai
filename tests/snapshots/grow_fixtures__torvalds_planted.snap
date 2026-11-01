@@ -1,0 +1,294 @@
+---
+source: tests/grow_fixtures.rs
+assertion_line: 25
+expression: "state::to_json(&a)"
+---
+{
+  "schema": 1,
+  "login": "torvalds",
+  "seed": "f3097657c581d9c3",
+  "planted": "2011-09-03",
+  "last_grown": "2026-10-31",
+  "trunk": {
+    "height": 24,
+    "girth": 5,
+    "bends": [
+      [
+        0,
+        0
+      ],
+      [
+        6,
+        -1
+      ],
+      [
+        11,
+        0
+      ],
+      [
+        17,
+        0
+      ],
+      [
+        22,
+        1
+      ]
+    ]
+  },
+  "branches": [
+    {
+      "repo_id": "MDEwOlJlcG9zaXRvcnkyMzI1Mjk4",
+      "name": "linux",
+      "lang": "C",
+      "color": "#555555",
+      "anchor": 5,
+      "side": "left",
+      "length": 9,
+      "pad": 6,
+      "commits_total": 38025,
+      "pruned": null
+    },
+    {
+      "repo_id": "MDEwOlJlcG9zaXRvcnkxMTc5MDA4MDU=",
+      "name": "uemacs",
+      "lang": "C",
+      "color": "#555555",
+      "anchor": 8,
+      "side": "right",
+      "length": 6,
+      "pad": 4,
+      "commits_total": 139,
+      "pruned": null
+    },
+    {
+      "repo_id": "R_kgDOQ8XTDQ",
+      "name": "HunspellColorize",
+      "lang": "C",
+      "color": "#555555",
+      "anchor": 12,
+      "side": "right",
+      "length": 3,
+      "pad": 3,
+      "commits_total": 5,
+      "pruned": null
+    },
+    {
+      "repo_id": "R_kgDOQ2ZvzA",
+      "name": "AudioNoise",
+      "lang": "C",
+      "color": "#555555",
+      "anchor": 15,
+      "side": "left",
+      "length": 4,
+      "pad": 3,
+      "commits_total": 45,
+      "pruned": null
+    },
+    {
+      "repo_id": "R_kgDOPxUIkg",
+      "name": "GuitarPedal",
+      "lang": "C",
+      "color": "#555555",
+      "anchor": 18,
+      "side": "right",
+      "length": 8,
+      "pad": 5,
+      "commits_total": 820,
+      "pruned": null
+    },
+    {
+      "repo_id": "R_kgDOOBVydA",
+      "name": "1590A",
+      "lang": "OpenSCAD",
+      "color": "#e5cd45",
+      "anchor": 21,
+      "side": "left",
+      "length": 3,
+      "pad": 0,
+      "commits_total": 38,
+      "pruned": "2025-09-19"
+    }
+  ],
+  "year_cache": {
+    "2011": {
+      "MDEwOlJlcG9zaXRvcnkxMTMwOTk4Mzc=": 1,
+      "MDEwOlJlcG9zaXRvcnkxMTc5MDA4MDU=": 4,
+      "MDEwOlJlcG9zaXRvcnkyMzI1Mjk4": 2080
+    },
+    "2012": {
+      "MDEwOlJlcG9zaXRvcnkxMTMwOTk4Mzc=": 1,
+      "MDEwOlJlcG9zaXRvcnkxMTc5MDA4MDU=": 17,
+      "MDEwOlJlcG9zaXRvcnkyMzI1Mjk4": 2271
+    },
+    "2013": {
+      "MDEwOlJlcG9zaXRvcnkxMTc5MDA4MDU=": 2,
+      "MDEwOlJlcG9zaXRvcnkyMzI1Mjk4": 2044
+    },
+    "2014": {
+      "MDEwOlJlcG9zaXRvcnkxMTc5MDA4MDU=": 1,
+      "MDEwOlJlcG9zaXRvcnkyMzI1Mjk4": 2085
+    },
+    "2015": {
+      "MDEwOlJlcG9zaXRvcnkyMzI1Mjk4": 2009
+    },
+    "2016": {
+      "MDEwOlJlcG9zaXRvcnkxMTc5MDA4MDU=": 2,
+      "MDEwOlJlcG9zaXRvcnkyMzI1Mjk4": 2273
+    },
+    "2017": {
+      "MDEwOlJlcG9zaXRvcnk4NjEwNjQ5Mw==": 10,
+      "MDEwOlJlcG9zaXRvcnkxMTc5MDA4MDU=": 1,
+      "MDEwOlJlcG9zaXRvcnkyMzI1Mjk4": 2303
+    },
+    "2018": {
+      "MDEwOlJlcG9zaXRvcnkxMTc5MDA4MDU=": 4,
+      "MDEwOlJlcG9zaXRvcnkyMzI1Mjk4": 2172
+    },
+    "2019": {
+      "MDEwOlJlcG9zaXRvcnkyMzI1Mjk4": 2382
+    },
+    "2020": {
+      "MDEwOlJlcG9zaXRvcnkyMzI1Mjk4": 2635
+    },
+    "2021": {
+      "MDEwOlJlcG9zaXRvcnkxMTc5MDA4MDU=": 1,
+      "MDEwOlJlcG9zaXRvcnkyMzI1Mjk4": 2414
+    },
+    "2022": {
+      "MDEwOlJlcG9zaXRvcnkyMzI1Mjk4": 2601
+    },
+    "2023": {
+      "MDEwOlJlcG9zaXRvcnkyMzI1Mjk4": 2506
+    },
+    "2024": {
+      "MDEwOlJlcG9zaXRvcnkyMzI1Mjk4": 2888
+    },
+    "2025": {
+      "MDEwOlJlcG9zaXRvcnkyMzI1Mjk4": 2786,
+      "R_kgDOOBVydA": 56,
+      "R_kgDOPxUIkg": 80
+    }
+  },
+  "history": [
+    {
+      "date": "2011-09",
+      "cells_added": 8
+    },
+    {
+      "date": "2011-10",
+      "cells_added": 2
+    },
+    {
+      "date": "2011-11",
+      "cells_added": 1
+    },
+    {
+      "date": "2011-12",
+      "cells_added": 1
+    },
+    {
+      "date": "2013-07",
+      "cells_added": 3
+    },
+    {
+      "date": "2017-02",
+      "cells_added": 3
+    },
+    {
+      "date": "2018-12",
+      "cells_added": 1
+    },
+    {
+      "date": "2025-01",
+      "cells_added": 6
+    },
+    {
+      "date": "2025-05",
+      "cells_added": 1
+    },
+    {
+      "date": "2025-07",
+      "cells_added": 1
+    },
+    {
+      "date": "2025-10-10",
+      "cells_added": 1
+    },
+    {
+      "date": "2026-01-11",
+      "cells_added": 1
+    },
+    {
+      "date": "2026-01-12",
+      "cells_added": 1
+    },
+    {
+      "date": "2026-01-13",
+      "cells_added": 1
+    },
+    {
+      "date": "2026-01-24",
+      "cells_added": 1
+    },
+    {
+      "date": "2026-01-25",
+      "cells_added": 1
+    },
+    {
+      "date": "2026-03-20",
+      "cells_added": 1
+    },
+    {
+      "date": "2026-03-21",
+      "cells_added": 1
+    },
+    {
+      "date": "2026-03-22",
+      "cells_added": 1
+    },
+    {
+      "date": "2026-04-09",
+      "cells_added": 1
+    },
+    {
+      "date": "2026-04-18",
+      "cells_added": 1
+    },
+    {
+      "date": "2026-08-01",
+      "cells_added": 1
+    },
+    {
+      "date": "2026-08-02",
+      "cells_added": 1
+    },
+    {
+      "date": "2026-08-18",
+      "cells_added": 1
+    },
+    {
+      "date": "2026-10-05",
+      "cells_added": 1
+    },
+    {
+      "date": "2026-10-06",
+      "cells_added": 1
+    }
+  ],
+  "vitals": {
+    "phase": "growing",
+    "streak_days": 14,
+    "idle_days": 0,
+    "commits_total": 39104,
+    "stars_total": 266260,
+    "public_repos": 12,
+    "activity_28d": {
+      "MDEwOlJlcG9zaXRvcnkxMTc5MDA4MDU=": 0,
+      "MDEwOlJlcG9zaXRvcnkyMzI1Mjk4": 384,
+      "R_kgDOPxUIkg": 19,
+      "R_kgDOQ2ZvzA": 0,
+      "R_kgDOQ8XTDQ": 0
+    },
+    "grew": {}
+  }
+}

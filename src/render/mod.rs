@@ -1,6 +1,8 @@
 //! Rendering: everything here takes a finished [`Scene`] (a grid plus the texts around it).
 
 pub mod ascii;
+#[cfg(feature = "gif")]
+pub mod gif;
 pub mod svg;
 
 use crate::grid::{Grid, LangId};

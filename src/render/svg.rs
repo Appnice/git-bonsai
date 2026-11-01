@@ -33,6 +33,8 @@ const _: () = assert!(LEGEND_Y + LEGEND_ROW + 12 <= HEIGHT - PAD);
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SvgOptions {
     pub theme: Theme,
+    /// CSS growth animation (phase 5; ignored for now).
+    pub animate: bool,
 }
 
 /// Colours in first-use order, each one a CSS class `c<i>`; deterministic, no hashing.

@@ -10,12 +10,16 @@ board "07 Commit pixels" (`src/board07.txt`, `~/appnice-apps/projects/git-bonsai
 - `make boards` writes board 07 SVGs to `target/`. Accept golden changes with `INSTA_UPDATE=always cargo test`
   only after looking at the diff.
 - Rust is Homebrew rustup, not on PATH: `export PATH=/opt/homebrew/opt/rustup/bin:$PATH`.
+- CLI (offline with `--from-snapshot`): `cargo run -- plant --from-snapshot tests/fixtures/torvalds-2026-10-31.json --state /tmp/b/state.json --out /tmp/b`,
+  then `cargo run -- debug --state /tmp/b/state.json`. Live: `snapshot --login L --out s.json -v` (token from
+  `--token`/`GITHUB_TOKEN`/`GH_TOKEN`/`gh auth token`; read-only public API). Exit codes 0/2 config/3 API/4 state.
+- Features: `network` (github/), `cli` (binary), `gif`; all default. `cargo build --lib --no-default-features` must pass.
 - Screenshots of an SVG (frozen CSS animations at given ms): `node ~/.cache/git-bonsai-tools/shot.js <svg> <outPrefix> [scale] [ms,ms]`.
 
 ## Layout
 
 `fetch (github/) → Snapshot (snapshot.rs) → grow (grow.rs, rules.rs) → TreeState (state.rs) → layout/ → Grid (grid.rs) → render/ (svg, ascii, gif)`.
-Palette and themes: `palette.rs`. Board 07 reference scene: `reference.rs`.
+Config (`bonsai.toml`): `config.rs`. Palette and themes: `palette.rs`. Board 07 reference scene: `reference.rs`.
 
 ## Rules
 
