@@ -171,12 +171,7 @@ fn frame(scene: &Scene, theme: Theme, progress: f64, dist: &[Option<u32>], max_d
             let x0 = (PAD + (i as u32 % 2) * (col_w + LEGEND_COL_GAP)) as i32;
             let y0 = (LEGEND_Y + (i as u32 / 2) * LEGEND_ROW) as i32;
             let (sw, label, muted): (Vec<Rgb>, String, bool) = match item {
-                LegendItem::Branch {
-                    repo,
-                    language,
-                    commits,
-                    lang,
-                } => {
+                LegendItem::Branch { lang, .. } => {
                     let p = scene.langs.get(usize::from(*lang));
                     (
                         [1u8, 3, 4]
@@ -185,13 +180,11 @@ fn frame(scene: &Scene, theme: Theme, progress: f64, dist: &[Option<u32>], max_d
                                 p.map_or(t.empty, |p| crate::palette::legible(p.level(*l), t.empty))
                             })
                             .collect(),
-                        format!("{repo} · {language} · {commits}"),
+                        item.label(33, ".."),
                         false,
                     )
                 }
-                LegendItem::Pruned { repo } => {
-                    (vec![fixed::SCAR], format!("pruned · {repo}"), true)
-                }
+                LegendItem::Pruned { .. } => (vec![fixed::SCAR], item.label(37, ".."), true),
             };
             let mut x = x0;
             for c in sw {

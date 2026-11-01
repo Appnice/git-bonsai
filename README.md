@@ -32,10 +32,14 @@ One commit wakes it up.
 
 ## Gallery
 
-| A brand-new account | A polyglot with 14 years of history | Two months of silence |
-|---|---|---|
-| <img src="docs/gallery/sapling_state-dark.svg" width="260" alt="Sapling"> | <img src="docs/gallery/polyglot_state-dark.svg" width="260" alt="Polyglot tree"> | <img src="docs/gallery/dormant_state-dark.svg" width="260" alt="Dormant tree"> |
-| `sapling` | `growing` | `dormant` |
+| A brand-new account | A polyglot with 14 years of history |
+|---|---|
+| <img src="docs/gallery/sapling_state-dark.svg" width="360" alt="Sapling"> | <img src="docs/gallery/polyglot_state-dark.svg" width="360" alt="Polyglot tree"> |
+| **Two months of silence** | **An organization** (`anthropics`, from its public repos) |
+| <img src="docs/gallery/dormant_state-dark.svg" width="360" alt="Dormant tree"> | <img src="docs/gallery/anthropics_state-dark.svg" width="360" alt="Organization tree"> |
+
+Organizations work too: an org has no contribution calendar of its own, so its tree grows from the
+commits on the default branches of its most active public repos. It gets a celadon pot and an ORG tag.
 
 ## How your activity becomes a tree
 

@@ -78,7 +78,68 @@ pub enum LegendItem {
     Pruned { repo: String },
 }
 
+impl LegendItem {
+    /// The legend text, at most `max` characters: a long repo name is cut and ends in `ellipsis`,
+    /// and the language goes when even a short name would not fit.
+    pub fn label(&self, max: usize, ellipsis: &str) -> String {
+        let cut = |name: &str, room: usize| -> String {
+            if name.chars().count() <= room {
+                name.to_string()
+            } else {
+                let keep = room.saturating_sub(ellipsis.chars().count());
+                name.chars().take(keep).collect::<String>() + ellipsis
+            }
+        };
+        match self {
+            LegendItem::Branch {
+                repo,
+                language,
+                commits,
+                ..
+            } => {
+                let tail = format!(" · {language} · {commits}");
+                let room = max.saturating_sub(tail.chars().count());
+                if room >= 6 {
+                    cut(repo, room) + &tail
+                } else {
+                    let tail = format!(" · {commits}");
+                    cut(repo, max.saturating_sub(tail.chars().count())) + &tail
+                }
+            }
+            LegendItem::Pruned { repo } => format!("pruned · {}", cut(repo, max.saturating_sub(9))),
+        }
+    }
+}
+
 /// Everything one image shows.
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn long_legend_labels_fit() {
+        let b = LegendItem::Branch {
+            repo: "claude-plugins-official".into(),
+            language: "python".into(),
+            commits: 4658,
+            lang: 0,
+        };
+        let l = b.label(27, "…");
+        assert_eq!(l.chars().count(), 27, "{l}");
+        assert!(
+            l.starts_with("claude-pl") && l.ends_with("· python · 4658"),
+            "{l}"
+        );
+        let short = LegendItem::Branch {
+            repo: "mifi".into(),
+            language: "kotlin".into(),
+            commits: 9,
+            lang: 0,
+        };
+        assert_eq!(short.label(27, "…"), "mifi · kotlin · 9");
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Scene {
     pub grid: Grid,

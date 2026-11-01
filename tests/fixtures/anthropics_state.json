@@ -1,0 +1,205 @@
+{
+  "schema": 1,
+  "login": "anthropics",
+  "kind": "org",
+  "seed": "4101d6a388638d9e",
+  "planted": "2020-12-19",
+  "last_grown": "2026-10-31",
+  "trunk": {
+    "height": 17,
+    "girth": 3,
+    "bends": [
+      [
+        0,
+        0
+      ],
+      [
+        5,
+        1
+      ],
+      [
+        10,
+        1
+      ],
+      [
+        16,
+        1
+      ]
+    ]
+  },
+  "branches": [
+    {
+      "repo_id": "R_kgDOVAJ3VA",
+      "name": "snix",
+      "lang": "Nix",
+      "color": "#7e7eff",
+      "anchor": 5,
+      "side": "right",
+      "length": 9,
+      "pad": 6,
+      "commits_total": 22853,
+      "pruned": null
+    },
+    {
+      "repo_id": "R_kgDOT2qbxQ",
+      "name": "OpenROAD-flow-scripts",
+      "lang": "Verilog",
+      "color": "#b2b7f8",
+      "anchor": 8,
+      "side": "left",
+      "length": 9,
+      "pad": 5,
+      "commits_total": 11502,
+      "pruned": null
+    },
+    {
+      "repo_id": "R_kgDOQFjJqA",
+      "name": "sandbox-runtime",
+      "lang": "TypeScript",
+      "color": "#3178c6",
+      "anchor": 11,
+      "side": "right",
+      "length": 8,
+      "pad": 5,
+      "commits_total": 888,
+      "pruned": null
+    },
+    {
+      "repo_id": "R_kgDOQZyFQA",
+      "name": "claude-plugins-official",
+      "lang": "Python",
+      "color": "#3572A5",
+      "anchor": 14,
+      "side": "left",
+      "length": 9,
+      "pad": 5,
+      "commits_total": 4658,
+      "pruned": null
+    }
+  ],
+  "year_cache": {
+    "2020": {
+      "R_kgDOT2qbxQ": 830,
+      "R_kgDOVAJ3VA": 14074
+    },
+    "2021": {
+      "R_kgDOT2qbxQ": 1751,
+      "R_kgDOVAJ3VA": 1550
+    },
+    "2022": {
+      "R_kgDOT2qbxQ": 1105,
+      "R_kgDOVAJ3VA": 2079
+    },
+    "2023": {
+      "R_kgDOT2qbxQ": 1628,
+      "R_kgDOVAJ3VA": 1763
+    },
+    "2024": {
+      "R_kgDOT2qbxQ": 1950,
+      "R_kgDOVAJ3VA": 1798
+    },
+    "2025": {
+      "R_kgDOQFjJqA": 142,
+      "R_kgDOQZyFQA": 18,
+      "R_kgDOT2qbxQ": 2482,
+      "R_kgDOVAJ3VA": 846
+    }
+  },
+  "history": [
+    {
+      "date": "2020-12",
+      "cells_added": 12
+    },
+    {
+      "date": "2022-11",
+      "cells_added": 11
+    },
+    {
+      "date": "2025-01",
+      "cells_added": 3
+    },
+    {
+      "date": "2025-03",
+      "cells_added": 1
+    },
+    {
+      "date": "2025-06",
+      "cells_added": 1
+    },
+    {
+      "date": "2025-11-23",
+      "cells_added": 1
+    },
+    {
+      "date": "2025-11-24",
+      "cells_added": 1
+    },
+    {
+      "date": "2026-08-05",
+      "cells_added": 1
+    },
+    {
+      "date": "2026-08-06",
+      "cells_added": 1
+    },
+    {
+      "date": "2026-08-07",
+      "cells_added": 1
+    },
+    {
+      "date": "2026-08-24",
+      "cells_added": 1
+    },
+    {
+      "date": "2026-08-25",
+      "cells_added": 1
+    },
+    {
+      "date": "2026-08-28",
+      "cells_added": 1
+    },
+    {
+      "date": "2026-08-29",
+      "cells_added": 1
+    },
+    {
+      "date": "2026-09-02",
+      "cells_added": 1
+    },
+    {
+      "date": "2026-09-03",
+      "cells_added": 1
+    },
+    {
+      "date": "2026-09-04",
+      "cells_added": 2
+    },
+    {
+      "date": "2026-09-05",
+      "cells_added": 1
+    },
+    {
+      "date": "2026-09-14",
+      "cells_added": 1
+    },
+    {
+      "date": "2026-09-15",
+      "cells_added": 1
+    }
+  ],
+  "vitals": {
+    "phase": "growing",
+    "streak_days": 0,
+    "idle_days": 1,
+    "commits_total": 67732,
+    "stars_total": 700543,
+    "public_repos": 116,
+    "activity_28d": {
+      "R_kgDOQFjJqA": 85,
+      "R_kgDOQZyFQA": 307,
+      "R_kgDOT2qbxQ": 0,
+      "R_kgDOVAJ3VA": 54
+    },
+    "grew": {}
+  }
+}

@@ -488,20 +488,15 @@ pub fn render(scene: &Scene, opts: &SvgOptions) -> String {
         let x0 = PAD + (i as u32 % 2) * (col_w + LEGEND_COL_GAP);
         let y0 = LEGEND_Y + (i as u32 / 2) * LEGEND_ROW;
         let (swatches, label, muted) = match item {
-            LegendItem::Branch {
-                repo,
-                language,
-                commits,
-                lang,
-            } => {
+            LegendItem::Branch { lang, .. } => {
                 let p = scene.langs.get(usize::from(*lang));
                 let sw: Vec<Rgb> = [1u8, 3, 4]
                     .iter()
                     .map(|l| p.map_or(t.empty, |p| crate::palette::legible(p.level(*l), t.empty)))
                     .collect();
-                (sw, format!("{repo} · {language} · {commits}"), false)
+                (sw, item.label(27, "…"), false)
             }
-            LegendItem::Pruned { repo } => (vec![fixed::SCAR], format!("pruned · {repo}"), true),
+            LegendItem::Pruned { .. } => (vec![fixed::SCAR], item.label(31, "…"), true),
         };
         if anim {
             let _ = write!(
