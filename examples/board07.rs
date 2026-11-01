@@ -16,7 +16,13 @@ fn main() -> std::io::Result<()> {
         let path = format!("target/board07-{name}.svg");
         std::fs::write(
             &path,
-            svg::render(&board_scene(phase), &svg::SvgOptions { theme }),
+            svg::render(
+                &board_scene(phase),
+                &svg::SvgOptions {
+                    theme,
+                    animate: true,
+                },
+            ),
         )?;
         println!("{path}");
     }

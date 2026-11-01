@@ -22,7 +22,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .to_string();
         for theme in [Theme::Dark, Theme::Light] {
             let out = format!("target/gallery/{stem}-{}.svg", theme.name());
-            std::fs::write(&out, render(&scene, &SvgOptions { theme }))?;
+            std::fs::write(
+                &out,
+                render(
+                    &scene,
+                    &SvgOptions {
+                        theme,
+                        animate: true,
+                    },
+                ),
+            )?;
             println!("{out}");
         }
         print!("{}", git_bonsai::render::ascii::print(&scene.grid));

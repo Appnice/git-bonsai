@@ -3,7 +3,13 @@ use git_bonsai::render::{ascii, svg};
 use git_bonsai::{Phase, Theme};
 
 fn render(phase: Phase, theme: Theme) -> String {
-    svg::render(&board_scene(phase), &svg::SvgOptions { theme })
+    svg::render(
+        &board_scene(phase),
+        &svg::SvgOptions {
+            theme,
+            animate: true,
+        },
+    )
 }
 
 #[test]
@@ -51,5 +57,29 @@ fn svg_is_small_and_stable() {
     let a = render(Phase::Bloom { streak_days: 23 }, Theme::Dark);
     assert!(a.len() < 120 * 1024, "{} bytes", a.len());
     assert_eq!(a, render(Phase::Bloom { streak_days: 23 }, Theme::Dark));
-    assert_eq!(a.matches("<rect").count(), 1 + 1 + 36 * 34 + 3 * 3 + 1);
+    assert_eq!(
+        a.matches("<use href=\"#q\" x").count()
+            - a.matches("class=\"sh").count()
+            - a.matches("class=\"fr").count(),
+        36 * 34
+    );
+}
+
+#[test]
+fn svg_is_well_formed_xml_in_every_variant() {
+    for phase in [
+        Phase::Bloom { streak_days: 23 },
+        Phase::Growing,
+        Phase::Dormant { idle_days: 64 },
+    ] {
+        for theme in [Theme::Dark, Theme::Light] {
+            for animate in [true, false] {
+                let s = svg::render(&board_scene(phase), &svg::SvgOptions { theme, animate });
+                roxmltree::Document::parse(&s)
+                    .unwrap_or_else(|e| panic!("{phase:?} {theme:?} {animate}: {e}"));
+                assert_eq!(s.contains("@keyframes"), animate);
+                assert!(s.len() < 120 * 1024);
+            }
+        }
+    }
 }

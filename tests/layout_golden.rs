@@ -19,7 +19,10 @@ fn reference_state_ascii() {
 fn reference_state_svg_dark() {
     let svg = svg::render(
         &build_scene(&reference()),
-        &svg::SvgOptions { theme: Theme::Dark },
+        &svg::SvgOptions {
+            theme: Theme::Dark,
+            animate: true,
+        },
     );
     assert!(svg.len() < 120 * 1024);
     insta::assert_snapshot!("reference_state_dark", svg);

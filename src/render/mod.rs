@@ -1,6 +1,7 @@
 //! Rendering: everything here takes a finished [`Scene`] (a grid plus the texts around it).
 
 pub mod ascii;
+pub mod font;
 pub mod svg;
 
 use crate::grid::{Grid, LangId};

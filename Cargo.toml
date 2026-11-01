@@ -17,6 +17,7 @@ time = { version = "0.3", features = ["serde", "macros", "parsing", "formatting"
 [dev-dependencies]
 insta = "1"
 proptest = "1"
+roxmltree = "0.20"
 
 [profile.dev.package]
 insta.opt-level = 3
