@@ -1,0 +1,36 @@
+name: CI
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      accept:
+        description: Regenerate the golden snapshots and commit them
+        type: boolean
+        default: false
+permissions:
+  contents: write
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build
+        run: cargo build --all-targets
+      - name: Test
+        env:
+          INSTA_UPDATE: ${{ inputs.accept && 'always' || 'no' }}
+        run: cargo test
+      - name: Commit accepted snapshots
+        if: ${{ inputs.accept }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then echo "no snapshot changes"; exit 0; fi
+          git commit -m "test: accept the regenerated golden snapshots"
+          git push
