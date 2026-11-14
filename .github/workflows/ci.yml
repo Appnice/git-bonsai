@@ -37,7 +37,7 @@ jobs:
           git add -A
           if git diff --cached --quiet; then echo "no snapshot changes"; exit 0; fi
           git commit -m "test: accept the regenerated golden snapshots"
-          git push
+          git push origin HEAD:${{ github.ref_name }}
 
   preview:
     if: ${{ inputs.preview }}
