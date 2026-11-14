@@ -54,6 +54,8 @@ jobs:
             python3 -c "import json,sys;d=json.load(open('preview/live.json'));d['pad_mix']=sys.argv[1];json.dump(d,open('preview/'+sys.argv[1]+'.json','w'))" "$v"
             cargo run --release --quiet -- render --state "preview/$v.json" --theme dark --out "preview/$v-dark.svg"
             cargo run --release --quiet -- render --state "preview/$v.json" --theme light --out "preview/$v-light.svg"
+            echo "=== $v ==="
+            cargo run --release --quiet -- debug --state "preview/$v.json"
           done
           ls -l preview
       - name: Publish
