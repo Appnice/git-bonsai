@@ -451,30 +451,89 @@ fn place_branches(state: &TreeState, t: &TrunkShape, apex: Option<usize>) -> Vec
 }
 
 /// Language ids in first-use order over the branches; at most [`MAX_LANGS`].
+///
+/// A polyglot branch contributes every language its pad is split into (`Branch::langs`), so one pad
+/// can be drawn in several colours; a monolingual branch contributes its single language.
 fn languages(state: &TreeState) -> (Vec<String>, Vec<LangPalette>) {
     let mut names: Vec<String> = Vec::new();
     let mut pals = Vec::new();
     for b in &state.branches {
-        let name = b.lang.clone().unwrap_or_else(|| "other".into());
-        if !names.contains(&name) && names.len() < MAX_LANGS {
+        if b.langs.is_empty() {
             let base = b
                 .color
                 .as_deref()
                 .and_then(Rgb::from_hex)
                 .unwrap_or(NO_LANG);
-            names.push(name);
-            pals.push(LangPalette::from_linguist(base));
+            add_lang(&mut names, &mut pals, lang_name(b), base);
+        } else {
+            for l in &b.langs {
+                let base = l
+                    .color
+                    .as_deref()
+                    .and_then(Rgb::from_hex)
+                    .unwrap_or(NO_LANG);
+                add_lang(&mut names, &mut pals, l.name.clone(), base);
+            }
         }
     }
     (names, pals)
 }
 
+/// The label of a branch that is drawn in one colour.
+fn lang_name(b: &Branch) -> String {
+    b.lang.clone().unwrap_or_else(|| "other".into())
+}
+
+/// Adds a language to the scene's table, first use wins, at most [`MAX_LANGS`].
+fn add_lang(names: &mut Vec<String>, pals: &mut Vec<LangPalette>, name: String, base: Rgb) {
+    if !names.contains(&name) && names.len() < MAX_LANGS {
+        names.push(name);
+        pals.push(LangPalette::from_linguist(base));
+    }
+}
+
 fn lang_of(names: &[String], b: &Branch) -> LangId {
-    let name = b.lang.clone().unwrap_or_else(|| "other".into());
     names
         .iter()
-        .position(|n| *n == name)
+        .position(|n| *n == lang_name(b))
         .unwrap_or(names.len().saturating_sub(1)) as LangId
+}
+
+/// One branch's pad colours as `(LangId, bytes)`, biggest first.
+///
+/// Languages that did not fit into the scene's table fold into the first one, so a crowded tree
+/// shows fewer colours instead of the wrong ones.
+fn lang_weights(names: &[String], b: &Branch) -> Vec<(LangId, u64)> {
+    let mut out: Vec<(LangId, u64)> = Vec::new();
+    for l in &b.langs {
+        if let Some(i) = names.iter().position(|n| *n == l.name) {
+            out.push((i as LangId, l.bytes.max(1)));
+        }
+    }
+    if out.len() < 2 {
+        return vec![(lang_of(names, b), 1)];
+    }
+    out
+}
+
+/// The language of row `row` (top first) of a pad `rows` high: the pad is split into horizontal
+/// bands, one per language, in proportion to the bytes. Integer arithmetic only, no RNG.
+fn pick_lang(weights: &[(LangId, u64)], row: i32, rows: i32) -> LangId {
+    let first = weights.first().map(|(l, _)| *l).unwrap_or(0);
+    let total: u64 = weights.iter().map(|(_, w)| *w).sum();
+    if total == 0 || rows <= 0 {
+        return first;
+    }
+    let rows = u64::from(rows as u32);
+    let pos = (u64::from(row.max(0) as u32) * 2 + 1) * total / (2 * rows);
+    let mut acc = 0;
+    for (lang, w) in weights {
+        acc += *w;
+        if pos < acc {
+            return *lang;
+        }
+    }
+    weights.last().map(|(l, _)| *l).unwrap_or(first)
 }
 
 fn phase_of(state: &TreeState) -> Phase {
@@ -559,7 +618,8 @@ pub fn build_scene(state: &TreeState) -> Scene {
     for i in order {
         let (b, p) = (&state.branches[i], &placed[i]);
         let Some(pad) = p.pad else { continue };
-        let lang = lang_of(&names, b);
+        let weights = lang_weights(&names, b);
+        let lang = weights.first().map(|(l, _)| *l).unwrap_or(0);
         let act =
             f64::from(v.activity_28d.get(&b.repo_id).copied().unwrap_or(0)) / f64::from(max_act);
         let mut r = rng(&state.seed, &format!("pad:{}", b.repo_id));
@@ -578,7 +638,8 @@ pub fn build_scene(state: &TreeState) -> Scene {
                 let l = 1.0 + 2.2 * t + 0.9 * act + (unit(&mut r) - 0.5) * 1.6;
                 l.round().clamp(1.0, 4.0) as u8
             };
-            c.set(x, y, Role::Leaf { lang, level });
+            let leaf = pick_lang(&weights, y - top, bottom - top + 1);
+            c.set(x, y, Role::Leaf { lang: leaf, level });
         }
         // Cells grown on the last day: the branch tip and the pad's outer edge.
         let grew = v.grew.get(&b.repo_id).copied().unwrap_or(0) as usize;

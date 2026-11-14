@@ -20,6 +20,18 @@ pub enum AccountKind {
 pub const YMD: &[time::format_description::BorrowedFormatItem<'static>] =
     time::macros::format_description!("[year]-[month]-[day]");
 
+/// One language of a repo, by the bytes GitHub attributes to it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LangShare {
+    /// Language name (`TypeScript`), as linguist spells it.
+    pub name: String,
+    /// Linguist colour (`#3178c6`), when GitHub knows one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
+    /// Bytes of this language in the repo.
+    pub bytes: u64,
+}
+
 /// A repo as seen on the snapshot day.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RepoSignal {
@@ -33,6 +45,11 @@ pub struct RepoSignal {
     pub language: Option<String>,
     /// Linguist colour of that language (`#dea584`).
     pub color: Option<String>,
+    /// Every language of the repo, biggest first, when GitHub reports more than one.
+    /// `language`/`color` still describe the primary one; a repo with a single language
+    /// leaves this empty.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub languages: Vec<LangShare>,
     /// The owner's commits in this repo over the whole history (summed year by year).
     pub commits_total: u64,
     /// The owner's commits in this repo over the 28 days up to the snapshot date.

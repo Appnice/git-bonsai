@@ -425,6 +425,7 @@ pub fn fetch(
                 is_fork: r.is_fork,
                 is_archived: r.is_archived,
                 stars: r.stars,
+                languages: r.languages.clone(),
                 language: r.language.clone(),
                 color: r.color.clone(),
                 commits_total: by_year.values().sum(),

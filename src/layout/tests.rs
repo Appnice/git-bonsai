@@ -28,6 +28,7 @@ fn branch(i: usize, anchor: u32, side: Side, length: u32, pad: u32, pruned: bool
         name: format!("repo{i}"),
         lang: Some(["Rust", "Kotlin", "Python", "Go"][i % 4].into()),
         color: Some(["#dea584", "#a97bff", "#3572a5", "#00add8"][i % 4].into()),
+        langs: Vec::new(),
         anchor,
         side,
         length,

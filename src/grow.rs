@@ -4,7 +4,7 @@
 
 use crate::config::{Config, ConfigError};
 use crate::rules;
-use crate::snapshot::{AccountKind, RepoSignal, Snapshot};
+use crate::snapshot::{AccountKind, LangShare, RepoSignal, Snapshot};
 use crate::state::{Branch, HistoryEntry, PhaseKind, Side, TreeState, Trunk, Vitals, SCHEMA};
 use std::collections::{BTreeMap, BTreeSet};
 use time::{Date, Duration};
@@ -231,6 +231,7 @@ fn step(state: &mut TreeState, day: &Day, cfg: &Config) -> StepOut {
                 b.name = r.name.clone();
                 b.lang = r.language.clone();
                 b.color = color_of(r, cfg);
+                b.langs = pad_langs(r, cfg);
                 b.commits_total = b.commits_total.max(r.commits_total);
                 if r.is_archived {
                     prune(b, day.date);
@@ -406,6 +407,33 @@ fn color_of(r: &RepoSignal, cfg: &Config) -> Option<String> {
         .or_else(|| r.color.clone())
 }
 
+/// The languages a pad is split into: the biggest ones of the repo that clear `min_lang_share`
+/// percent of its bytes, at most `max_pad_langs` of them, biggest first.
+///
+/// Empty when the repo has one language or the pad should keep one colour; the image then falls
+/// back to `lang`/`color`.
+fn pad_langs(r: &RepoSignal, cfg: &Config) -> Vec<LangShare> {
+    if cfg.max_pad_langs < 2 || r.languages.len() < 2 {
+        return Vec::new();
+    }
+    let mut shares = r.languages.clone();
+    shares.sort_by(|a, b| b.bytes.cmp(&a.bytes).then_with(|| a.name.cmp(&b.name)));
+    let total: u64 = shares.iter().map(|l| l.bytes).sum();
+    if total == 0 {
+        return Vec::new();
+    }
+    let floor = total * u64::from(cfg.min_lang_share) / 100;
+    let mut out: Vec<LangShare> = shares
+        .into_iter()
+        .filter(|l| l.bytes >= floor)
+        .take(cfg.max_pad_langs as usize)
+        .collect();
+    if out.len() < 2 {
+        out.clear();
+    }
+    out
+}
+
 /// The living branch with the most commits (the apex pad), ties by `repo_id`.
 fn top_repo(state: &TreeState) -> Option<String> {
     living(state)
@@ -463,6 +491,7 @@ fn new_branch(
         name: repo.name.clone(),
         lang: repo.language.clone(),
         color: color_of(repo, cfg),
+        langs: pad_langs(repo, cfg),
         anchor,
         side,
         length: 1,
@@ -684,6 +713,7 @@ mod tests {
             stars: 10,
             language: Some("Rust".into()),
             color: Some("#dea584".into()),
+            languages: Vec::new(),
             commits_total: total,
             commits_28d: 5,
             commits_today: 1,

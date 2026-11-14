@@ -14,7 +14,7 @@
 //!   is the all-time count minus the finished years; the org's first year includes all earlier
 //!   (imported) history.
 
-use super::queries::{decode, not_found, timestamp};
+use super::queries::{decode, lang_shares, not_found, timestamp, LangConn};
 use super::{ApiError, Client, FetchOptions, YearCache};
 use crate::rules;
 use crate::snapshot::{AccountKind, CalendarDay, RepoSignal, Snapshot};
@@ -47,6 +47,7 @@ macro_rules! org_fields {
       nodes {
         id name isFork isArchived archivedAt stargazerCount
         primaryLanguage { name color }
+        languages(first: 6) { edges { size node { name color } } }
       }
     }"#
     };
@@ -111,6 +112,8 @@ struct RepoNode {
     archived_at: Option<String>,
     stargazer_count: u64,
     primary_language: Option<LangNode>,
+    #[serde(default)]
+    languages: Option<LangConn>,
 }
 
 #[derive(Deserialize)]
@@ -200,6 +203,7 @@ pub fn fetch(
                 is_fork: r.is_fork,
                 is_archived: r.is_archived,
                 stars: r.stargazer_count,
+                languages: lang_shares(r.languages),
                 language: r.primary_language.as_ref().map(|l| l.name.clone()),
                 color: r.primary_language.and_then(|l| l.color),
                 commits_total: 0,

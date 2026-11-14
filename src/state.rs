@@ -1,7 +1,7 @@
 //! The tree's memory: `bonsai/state.json` in the profile repo, the only source of the tree's shape.
 //! The image is always a function of this state.
 
-use crate::snapshot::{ymd, AccountKind};
+use crate::snapshot::{ymd, AccountKind, LangShare};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use time::Date;
@@ -36,6 +36,10 @@ pub struct Branch {
     /// Linguist colour at the time it was last seen (`#dea584`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub color: Option<String>,
+    /// The languages its pad is split into, biggest first, when the repo is polyglot and the pad
+    /// has room for more than one colour. Empty means the pad is all `lang`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub langs: Vec<LangShare>,
     /// Trunk row the branch leaves from (0 = just above the soil).
     pub anchor: u32,
     pub side: Side,

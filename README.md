@@ -53,7 +53,7 @@ commits on the default branches of its most active public repos. It gets a celad
 | A repo you commit to (yours, not a fork, not archived) | A branch with a pad of leaves (up to 16, by commits in the last year) |
 | More than 12 active repos | One branch per language instead, sized by all its repos (`6 repos · python`) |
 | Commits in that repo | Branch length and pad size, `log2(1 + commits)` |
-| The repo's main language | The pad's colour (linguist colour, four shades in OKLCH) |
+| The repo's languages | The pad's colour (linguist colour, four shades in OKLCH). A polyglot repo splits its pad into bands, one per language above `min_lang_share` of its bytes |
 | Activity in the last 28 days | Darker leaves, like the contribution graph |
 | Archived or deleted repo | Pruned: a 3-cell stub with a scar, kept forever |
 | A streak of 21+ days | Blossoms |
@@ -134,6 +134,8 @@ pin = ["my-favourite"]      # always gets a branch
 max_growth_per_day = 1
 bloom_streak_days = 21
 dormant_after_days = 60
+max_pad_langs = 3           # colours one pad may be split into (1 = one per branch)
+min_lang_share = 8          # percent of a repo's bytes a language needs for its own band
 
 [colors]
 Kotlin = "#a97bff"          # override a language colour

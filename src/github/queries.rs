@@ -1,6 +1,7 @@
 //! The two GraphQL queries of the RFC and their response types.
 
 use super::{ApiError, Client};
+use crate::snapshot::LangShare;
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use time::format_description::well_known::Rfc3339;
@@ -23,6 +24,7 @@ pub const PROFILE: &str = concat!(
       nodes {
         id name isFork isArchived archivedAt stargazerCount pushedAt createdAt
         primaryLanguage { name color }
+        languages(first: 6) { edges { size node { name color } } }
       }
     }
   }
@@ -120,6 +122,8 @@ pub struct Repo {
     pub stars: u64,
     pub language: Option<String>,
     pub color: Option<String>,
+    /// Every language of the repo, biggest first (empty when GitHub reports one).
+    pub languages: Vec<LangShare>,
 }
 
 /// Query 1, all pages.
@@ -176,12 +180,45 @@ struct RepoNode {
     archived_at: Option<String>,
     stargazer_count: u64,
     primary_language: Option<LangNode>,
+    #[serde(default)]
+    languages: Option<LangConn>,
 }
 
 #[derive(Deserialize)]
 struct LangNode {
     name: String,
     color: Option<String>,
+}
+
+/// A repo's languages, as `languages(first: n) { edges { size node { .. } } }` returns them.
+#[derive(Deserialize)]
+pub(super) struct LangConn {
+    edges: Vec<LangEdge>,
+}
+
+#[derive(Deserialize)]
+struct LangEdge {
+    size: u64,
+    node: LangNode,
+}
+
+/// Every language of a repo, biggest first; ties by name, so the order never depends on the API.
+pub(super) fn lang_shares(conn: Option<LangConn>) -> Vec<LangShare> {
+    let Some(conn) = conn else {
+        return Vec::new();
+    };
+    let mut out: Vec<LangShare> = conn
+        .edges
+        .into_iter()
+        .filter(|e| e.size > 0)
+        .map(|e| LangShare {
+            name: e.node.name,
+            color: e.node.color,
+            bytes: e.size,
+        })
+        .collect();
+    out.sort_by(|a, b| b.bytes.cmp(&a.bytes).then_with(|| a.name.cmp(&b.name)));
+    out
 }
 
 #[derive(Deserialize)]
@@ -295,6 +332,7 @@ pub fn profile(client: &Client, login: &str) -> Result<Account, ApiError> {
                 is_archived: n.is_archived,
                 archived_at: n.archived_at.as_deref().map(timestamp).transpose()?,
                 stars: n.stargazer_count,
+                languages: lang_shares(n.languages),
                 language: n.primary_language.as_ref().map(|l| l.name.clone()),
                 color: n.primary_language.and_then(|l| l.color),
             });

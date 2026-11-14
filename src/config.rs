@@ -14,7 +14,14 @@ pub enum ConfigError {
     ZeroDays(&'static str),
     #[error("colour for {lang} must be #rrggbb, got {value:?}")]
     Color { lang: String, value: String },
+    #[error("max_pad_langs must be 1..={MAX_PAD_LANGS}, got {0}")]
+    MaxPadLangs(u32),
+    #[error("min_lang_share must be 1..=50, got {0}")]
+    MinLangShare(u32),
 }
+
+/// Most colours one pad can be split into. Above that a leaf is thinner than the trunk.
+pub const MAX_PAD_LANGS: u32 = 4;
 
 /// What `bonsai.toml` may set. Every field is optional in the file.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -32,6 +39,10 @@ pub struct Config {
     pub dormant_after_days: u32,
     /// Language colour overrides, `{"Kotlin": "#a97bff"}`.
     pub colors: BTreeMap<String, String>,
+    /// Colours a polyglot repo's pad may be split into (1 keeps one colour per branch).
+    pub max_pad_langs: u32,
+    /// Smallest share of a repo's bytes that earns its own colour on the pad, in percent.
+    pub min_lang_share: u32,
 }
 
 impl Default for Config {
@@ -44,6 +55,8 @@ impl Default for Config {
             bloom_streak_days: 21,
             dormant_after_days: 60,
             colors: BTreeMap::new(),
+            max_pad_langs: 3,
+            min_lang_share: 8,
         }
     }
 }
@@ -73,6 +86,12 @@ impl Config {
                     value: value.clone(),
                 });
             }
+        }
+        if !(1..=MAX_PAD_LANGS).contains(&self.max_pad_langs) {
+            return Err(ConfigError::MaxPadLangs(self.max_pad_langs));
+        }
+        if !(1..=50).contains(&self.min_lang_share) {
+            return Err(ConfigError::MinLangShare(self.min_lang_share));
         }
         Ok(())
     }
