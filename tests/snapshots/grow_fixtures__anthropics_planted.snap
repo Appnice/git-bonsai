@@ -6,6 +6,7 @@ expression: "state::to_json(&a)"
   "schema": 1,
   "login": "anthropics",
   "kind": "org",
+  "pad_mix": "patches",
   "seed": "4101d6a388638d9e",
   "planted": "2020-12-19",
   "last_grown": "2026-10-31",
