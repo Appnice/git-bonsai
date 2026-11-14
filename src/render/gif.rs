@@ -171,18 +171,27 @@ fn frame(scene: &Scene, theme: Theme, progress: f64, dist: &[Option<u32>], max_d
             let x0 = (PAD + (i as u32 % 2) * (col_w + LEGEND_COL_GAP)) as i32;
             let y0 = (LEGEND_Y + (i as u32 / 2) * LEGEND_ROW) as i32;
             let (sw, label, muted): (Vec<Rgb>, String, bool) = match item {
-                LegendItem::Branch { lang, .. } => {
-                    let p = scene.langs.get(usize::from(*lang));
-                    (
+                LegendItem::Branch { langs, .. } => {
+                    let sw: Vec<Rgb> = if langs.len() < 2 {
+                        let first = langs.first().map_or(0, |l| l.lang);
+                        let p = scene.langs.get(usize::from(first));
                         [1u8, 3, 4]
                             .iter()
                             .map(|l| {
                                 p.map_or(t.empty, |p| crate::palette::legible(p.level(*l), t.empty))
                             })
-                            .collect(),
-                        item.label(33, ".."),
-                        false,
-                    )
+                            .collect()
+                    } else {
+                        langs
+                            .iter()
+                            .map(|l| {
+                                scene.langs.get(usize::from(l.lang)).map_or(t.empty, |p| {
+                                    crate::palette::legible(p.level(2), t.empty)
+                                })
+                            })
+                            .collect()
+                    };
+                    (sw, item.label(33, ".."), false)
                 }
                 LegendItem::Pruned { .. } => (vec![fixed::SCAR], item.label(37, ".."), true),
             };

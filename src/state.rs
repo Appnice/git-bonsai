@@ -90,6 +90,17 @@ pub struct Vitals {
     pub grew: BTreeMap<String, u32>,
 }
 
+/// How a polyglot pad is painted: `Patches` dapples it in coherent blobs, `Scatter` mixes the
+/// leaves evenly, `Bands` gives each language whole rows.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum PadMix {
+    #[default]
+    Patches,
+    Scatter,
+    Bands,
+}
+
 /// The whole persisted tree.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TreeState {
@@ -98,6 +109,9 @@ pub struct TreeState {
     /// User or organization; organizations get a celadon pot and an ORG tag.
     #[serde(default)]
     pub kind: AccountKind,
+    /// How a pad showing several languages is painted; the image stays a function of the state.
+    #[serde(default)]
+    pub pad_mix: PadMix,
     /// 16 hex chars: first 8 bytes of `sha256(login + planted)`.
     pub seed: String,
     #[serde(with = "ymd")]

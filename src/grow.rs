@@ -129,6 +129,7 @@ pub fn plant(snapshot: &Snapshot, cfg: &Config) -> Result<TreeState, GrowError> 
         history: Vec::new(),
         vitals: Vitals::default(),
         kind: snapshot.kind,
+        pad_mix: Default::default(),
     };
     let calendar: BTreeMap<Date, u32> = snapshot
         .calendar
@@ -198,6 +199,7 @@ fn is_grouped(state: &TreeState, repos: &[RepoSignal], cfg: &Config) -> bool {
 /// One day of growth.
 fn step(state: &mut TreeState, day: &Day, cfg: &Config) -> StepOut {
     let age = (day.date - state.planted).whole_days();
+    state.pad_mix = cfg.pad_mix;
     // Trunk: age only, never shrinks.
     state.trunk.height = state.trunk.height.max(rules::trunk_height(age));
     state.trunk.girth = state.trunk.girth.max(rules::trunk_girth(age));
@@ -761,6 +763,7 @@ mod tests {
             history: Vec::new(),
             vitals: Vitals::default(),
             kind: AccountKind::User,
+            pad_mix: Default::default(),
         }
     }
 

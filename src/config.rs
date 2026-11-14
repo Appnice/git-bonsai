@@ -3,6 +3,8 @@
 use serde::Deserialize;
 use std::collections::BTreeMap;
 
+use crate::state::PadMix;
+
 /// Configuration errors (exit code 2 in the CLI).
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum ConfigError {
@@ -43,6 +45,8 @@ pub struct Config {
     pub max_pad_langs: u32,
     /// Smallest share of a repo's bytes that earns its own colour on the pad, in percent.
     pub min_lang_share: u32,
+    /// How a pad showing several languages is painted: `patches`, `scatter` or `bands`.
+    pub pad_mix: PadMix,
 }
 
 impl Default for Config {

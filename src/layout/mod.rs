@@ -6,8 +6,8 @@
 
 use crate::grid::{Grid, LangId, PotPart, Role, Shade, GRID_H, GRID_W, MAX_LANGS};
 use crate::palette::{LangPalette, PotGlaze, Rgb};
-use crate::render::{Header, LegendItem, Phase, Scene};
-use crate::state::{Branch, PhaseKind, Side, TreeState};
+use crate::render::{Header, LegendItem, LegendLang, Phase, Scene};
+use crate::state::{Branch, PadMix, PhaseKind, Side, TreeState};
 use rand_chacha::rand_core::{RngCore, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
@@ -516,44 +516,64 @@ fn lang_weights(names: &[String], b: &Branch) -> Vec<(LangId, u64)> {
     out
 }
 
-/// One language per row of a pad `rows` high, top first.
-///
-/// Bytes decide the share and every language that physically fits gets at least one row, so a
-/// small share still shows up instead of vanishing on a short pad. Leftover rows go to the
-/// biggest remainders, which keeps the proportions when there are enough rows to go round.
-/// Integer arithmetic only, no RNG.
-fn pad_rows(weights: &[(LangId, u64)], rows: usize) -> Vec<LangId> {
-    let mut out = Vec::with_capacity(rows);
-    if rows == 0 || weights.is_empty() {
-        return out;
+/// The languages a legend row lists, biggest first: one entry per colour the pad carries, or the
+/// single language of a monolingual repo.
+fn legend_langs(names: &[String], b: &Branch) -> Vec<LegendLang> {
+    if b.langs.len() < 2 {
+        return vec![LegendLang {
+            lang: lang_of(names, b),
+            name: lang_name(b).to_lowercase(),
+            bytes: 0,
+        }];
     }
-    let n = weights.len().min(rows);
+    lang_weights(names, b)
+        .into_iter()
+        .map(|(lang, bytes)| LegendLang {
+            lang,
+            name: names
+                .get(usize::from(lang))
+                .cloned()
+                .unwrap_or_default()
+                .to_lowercase(),
+            bytes,
+        })
+        .collect()
+}
+
+/// Cells per language for a pad of `cells` cells: `floor(share)` but at least one for a language
+/// that physically fits, and the leftovers to the biggest remainders. Integer arithmetic only, so
+/// the counts never depend on the platform.
+fn lang_counts(weights: &[(LangId, u64)], cells: usize) -> Vec<(LangId, usize)> {
+    if cells == 0 || weights.is_empty() {
+        return Vec::new();
+    }
+    let n = weights.len().min(cells);
     let total: u64 = weights.iter().take(n).map(|(_, w)| *w).sum();
     if total == 0 {
-        return vec![weights[0].0; rows];
+        return vec![(weights[0].0, cells)];
     }
-    let rows_u = rows as u64;
+    let cells_u = cells as u64;
     let mut counts: Vec<u64> = (0..n)
-        .map(|i| (weights[i].1 * rows_u / total).max(1))
+        .map(|i| (weights[i].1 * cells_u / total).max(1))
         .collect();
     let mut sum: u64 = counts.iter().sum();
     let mut order: Vec<usize> = (0..n).collect();
     order.sort_by(|a, b| {
-        let ra = (weights[*a].1 * rows_u) % total;
-        let rb = (weights[*b].1 * rows_u) % total;
+        let ra = (weights[*a].1 * cells_u) % total;
+        let rb = (weights[*b].1 * cells_u) % total;
         rb.cmp(&ra)
             .then(weights[*b].1.cmp(&weights[*a].1))
             .then(a.cmp(b))
     });
     let mut k = 0;
-    while sum < rows_u {
+    while sum < cells_u {
         counts[order[k % n]] += 1;
         sum += 1;
         k += 1;
     }
     // `max(1, floor)` can overshoot by at most one row per language.
     for j in 0..n {
-        if sum <= rows_u {
+        if sum <= cells_u {
             break;
         }
         let i = order[n - 1 - j];
@@ -562,13 +582,99 @@ fn pad_rows(weights: &[(LangId, u64)], rows: usize) -> Vec<LangId> {
             sum -= 1;
         }
     }
-    for (i, (lang, _)) in weights.iter().take(n).enumerate() {
-        for _ in 0..counts[i] {
-            out.push(*lang);
+    (0..n)
+        .map(|i| (weights[i].0, counts[i] as usize))
+        .collect()
+}
+
+/// Whole rows per language, top first: the `bands` mix.
+fn pad_rows(weights: &[(LangId, u64)], rows: usize) -> Vec<LangId> {
+    let mut out = Vec::with_capacity(rows);
+    for (lang, n) in lang_counts(weights, rows) {
+        for _ in 0..n {
+            out.push(lang);
         }
     }
     out.truncate(rows);
     out
+}
+
+/// Languages for the visible cells of a pad, parallel to `cells`.
+///
+/// `Patches` walks a coherent noise field, so neighbours share a value and the colours clump like
+/// foliage; `Scatter` walks a white field, so they alternate evenly. Either way the cells are
+/// handed out by [`lang_counts`], so the shares stay exact.
+fn pad_mix_cells(
+    mix: PadMix,
+    weights: &[(LangId, u64)],
+    cells: &[(i32, i32, u8)],
+    seed: &str,
+    repo_id: &str,
+) -> Vec<LangId> {
+    let first = weights.first().map(|(l, _)| *l).unwrap_or(0);
+    let mut out = vec![first; cells.len()];
+    if cells.is_empty() || weights.len() < 2 {
+        return out;
+    }
+    let mut by_weight: Vec<LangId> = Vec::with_capacity(cells.len());
+    for (lang, n) in lang_counts(weights, cells.len()) {
+        for _ in 0..n {
+            by_weight.push(lang);
+        }
+    }
+    let coherent = mix == PadMix::Patches;
+    let noise: Vec<f64> = cells
+        .iter()
+        .map(|(x, y, _)| pad_noise(coherent, seed, repo_id, *x, *y))
+        .collect();
+    let mut order: Vec<usize> = (0..cells.len()).collect();
+    order.sort_by(|a, b| {
+        noise[*a]
+            .partial_cmp(&noise[*b])
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then(cells[*a].1.cmp(&cells[*b].1))
+            .then(cells[*a].0.cmp(&cells[*b].0))
+    });
+    for (k, i) in order.into_iter().enumerate() {
+        out[i] = by_weight[k];
+    }
+    out
+}
+
+/// Value noise in `0..1` for a pad cell. Coherent: a two-cell lattice, bilinearly blended, so
+/// neighbours agree; otherwise every cell is independent.
+fn pad_noise(coherent: bool, seed: &str, repo_id: &str, x: i32, y: i32) -> f64 {
+    if !coherent {
+        return lattice_hash(seed, repo_id, x, y);
+    }
+    let (gx, gy) = (x.div_euclid(2), y.div_euclid(2));
+    let fx = f64::from(x.rem_euclid(2)) / 2.0;
+    let fy = f64::from(y.rem_euclid(2)) / 2.0;
+    let smooth = |t: f64| t * t * (3.0 - 2.0 * t);
+    let (sx, sy) = (smooth(fx), smooth(fy));
+    let n00 = lattice_hash(seed, repo_id, gx, gy);
+    let n10 = lattice_hash(seed, repo_id, gx + 1, gy);
+    let n01 = lattice_hash(seed, repo_id, gx, gy + 1);
+    let n11 = lattice_hash(seed, repo_id, gx + 1, gy + 1);
+    let upper = n00 + (n10 - n00) * sx;
+    let lower = n01 + (n11 - n01) * sx;
+    upper + (lower - upper) * sy
+}
+
+/// `0..1` from a stable hash of a lattice point (FNV-1a over the names, then splitmix64), so the
+/// same state always paints the same pad.
+fn lattice_hash(seed: &str, repo_id: &str, x: i32, y: i32) -> f64 {
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+    for b in seed.bytes().chain(repo_id.bytes()).chain([b'|']) {
+        h ^= u64::from(b);
+        h = h.wrapping_mul(0x0100_0000_01b3);
+    }
+    let mut v = h ^ (u64::from(x as u32) << 32) ^ u64::from(y as u32);
+    v = v.wrapping_add(0x9e37_79b9_7f4a_7c15);
+    v = (v ^ (v >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+    v = (v ^ (v >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
+    v ^= v >> 31;
+    (v >> 11) as f64 / (1u64 << 53) as f64
 }
 
 fn phase_of(state: &TreeState) -> Phase {
@@ -659,7 +765,9 @@ pub fn build_scene(state: &TreeState) -> Scene {
             f64::from(v.activity_28d.get(&b.repo_id).copied().unwrap_or(0)) / f64::from(max_act);
         let mut r = rng(&state.seed, &format!("pad:{}", b.repo_id));
         let (top, bottom) = (pad.cy - pad.ry, pad.cy + pad.ry);
-        let bands = pad_rows(&weights, (bottom - top + 1).max(0) as usize);
+        // Pass 1: the cells the pad shows and the shade each gets. The draws stay in the order they
+        // have always been made, so the ragged outline and the shading do not change.
+        let mut shown: Vec<(i32, i32, u8)> = Vec::new();
         for (x, y) in pad.cells() {
             // Ragged outline: some edge cells stay empty (never on the underside).
             if y < bottom && pad.is_edge(x, y) && unit(&mut r) < 0.22 {
@@ -674,11 +782,26 @@ pub fn build_scene(state: &TreeState) -> Scene {
                 let l = 1.0 + 2.2 * t + 0.9 * act + (unit(&mut r) - 0.5) * 1.6;
                 l.round().clamp(1.0, 4.0) as u8
             };
-            let leaf = bands
-                .get((y - top).max(0) as usize)
-                .copied()
-                .unwrap_or(lang);
-            c.set(x, y, Role::Leaf { lang: leaf, level });
+            shown.push((x, y, level));
+        }
+        // Pass 2: which language each of those cells is.
+        let mixes: Vec<LangId> = if weights.len() < 2 {
+            vec![lang; shown.len()]
+        } else if state.pad_mix == PadMix::Bands {
+            let rows = pad_rows(&weights, (bottom - top + 1).max(0) as usize);
+            shown
+                .iter()
+                .map(|(_, y, _)| {
+                    rows.get((*y - top).max(0) as usize)
+                        .copied()
+                        .unwrap_or(lang)
+                })
+                .collect()
+        } else {
+            pad_mix_cells(state.pad_mix, &weights, &shown, &state.seed, &b.repo_id)
+        };
+        for ((x, y, level), leaf) in shown.iter().zip(&mixes) {
+            c.set(*x, *y, Role::Leaf { lang: *leaf, level: *level });
         }
         // Cells grown on the last day: the branch tip and the pad's outer edge.
         let grew = v.grew.get(&b.repo_id).copied().unwrap_or(0) as usize;
@@ -769,13 +892,8 @@ pub fn build_scene(state: &TreeState) -> Scene {
     for b in by_size.iter().take(3) {
         legend.push(LegendItem::Branch {
             repo: b.name.clone(),
-            language: b
-                .lang
-                .clone()
-                .unwrap_or_else(|| "other".into())
-                .to_lowercase(),
             commits: b.commits_total,
-            lang: lang_of(&names, b),
+            langs: legend_langs(&names, b),
         });
     }
     let pruned = state
@@ -789,13 +907,8 @@ pub fn build_scene(state: &TreeState) -> Scene {
         }),
         (None, Some(b)) => legend.push(LegendItem::Branch {
             repo: b.name.clone(),
-            language: b
-                .lang
-                .clone()
-                .unwrap_or_else(|| "other".into())
-                .to_lowercase(),
             commits: b.commits_total,
-            lang: lang_of(&names, b),
+            langs: legend_langs(&names, b),
         }),
         _ => {}
     }

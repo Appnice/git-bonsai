@@ -3,7 +3,7 @@
 
 use crate::grid::{Grid, Role};
 use crate::palette::BOARD_LANGS;
-use crate::render::{ascii, Header, LegendItem, Phase, Scene};
+use crate::render::{ascii, Header, LegendItem, LegendLang, Phase, Scene};
 
 /// Board 07's character map, in the board's own notation (trunk shadow written `s`).
 pub const BOARD_MAP: &str = include_str!("board07.txt");
@@ -46,21 +46,30 @@ pub fn board_scene(phase: Phase) -> Scene {
         legend: vec![
             LegendItem::Branch {
                 repo: "lumen".into(),
-                language: "kotlin".into(),
                 commits: 2108,
-                lang: 0,
+                langs: vec![LegendLang {
+                    lang: 0,
+                    name: "kotlin".into(),
+                    bytes: 0,
+                }],
             },
             LegendItem::Branch {
                 repo: "ferrite".into(),
-                language: "rust".into(),
                 commits: 1204,
-                lang: 1,
+                langs: vec![LegendLang {
+                    lang: 1,
+                    name: "rust".into(),
+                    bytes: 0,
+                }],
             },
             LegendItem::Branch {
                 repo: "glyphs".into(),
-                language: "python".into(),
                 commits: 640,
-                lang: 2,
+                langs: vec![LegendLang {
+                    lang: 2,
+                    name: "python".into(),
+                    bytes: 0,
+                }],
             },
             LegendItem::Pruned {
                 repo: "old-android-lib".into(),
