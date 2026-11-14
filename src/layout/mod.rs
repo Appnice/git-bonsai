@@ -516,24 +516,59 @@ fn lang_weights(names: &[String], b: &Branch) -> Vec<(LangId, u64)> {
     out
 }
 
-/// The language of row `row` (top first) of a pad `rows` high: the pad is split into horizontal
-/// bands, one per language, in proportion to the bytes. Integer arithmetic only, no RNG.
-fn pick_lang(weights: &[(LangId, u64)], row: i32, rows: i32) -> LangId {
-    let first = weights.first().map(|(l, _)| *l).unwrap_or(0);
-    let total: u64 = weights.iter().map(|(_, w)| *w).sum();
-    if total == 0 || rows <= 0 {
-        return first;
+/// One language per row of a pad `rows` high, top first.
+///
+/// Bytes decide the share and every language that physically fits gets at least one row, so a
+/// small share still shows up instead of vanishing on a short pad. Leftover rows go to the
+/// biggest remainders, which keeps the proportions when there are enough rows to go round.
+/// Integer arithmetic only, no RNG.
+fn pad_rows(weights: &[(LangId, u64)], rows: usize) -> Vec<LangId> {
+    let mut out = Vec::with_capacity(rows);
+    if rows == 0 || weights.is_empty() {
+        return out;
     }
-    let rows = u64::from(rows as u32);
-    let pos = (u64::from(row.max(0) as u32) * 2 + 1) * total / (2 * rows);
-    let mut acc = 0;
-    for (lang, w) in weights {
-        acc += *w;
-        if pos < acc {
-            return *lang;
+    let n = weights.len().min(rows);
+    let total: u64 = weights.iter().take(n).map(|(_, w)| *w).sum();
+    if total == 0 {
+        return vec![weights[0].0; rows];
+    }
+    let rows_u = rows as u64;
+    let mut counts: Vec<u64> = (0..n)
+        .map(|i| (weights[i].1 * rows_u / total).max(1))
+        .collect();
+    let mut sum: u64 = counts.iter().sum();
+    let mut order: Vec<usize> = (0..n).collect();
+    order.sort_by(|a, b| {
+        let ra = (weights[*a].1 * rows_u) % total;
+        let rb = (weights[*b].1 * rows_u) % total;
+        rb.cmp(&ra)
+            .then(weights[*b].1.cmp(&weights[*a].1))
+            .then(a.cmp(b))
+    });
+    let mut k = 0;
+    while sum < rows_u {
+        counts[order[k % n]] += 1;
+        sum += 1;
+        k += 1;
+    }
+    // `max(1, floor)` can overshoot by at most one row per language.
+    for j in 0..n {
+        if sum <= rows_u {
+            break;
+        }
+        let i = order[n - 1 - j];
+        if counts[i] > 1 {
+            counts[i] -= 1;
+            sum -= 1;
         }
     }
-    weights.last().map(|(l, _)| *l).unwrap_or(first)
+    for (i, (lang, _)) in weights.iter().take(n).enumerate() {
+        for _ in 0..counts[i] {
+            out.push(*lang);
+        }
+    }
+    out.truncate(rows);
+    out
 }
 
 fn phase_of(state: &TreeState) -> Phase {
@@ -624,6 +659,7 @@ pub fn build_scene(state: &TreeState) -> Scene {
             f64::from(v.activity_28d.get(&b.repo_id).copied().unwrap_or(0)) / f64::from(max_act);
         let mut r = rng(&state.seed, &format!("pad:{}", b.repo_id));
         let (top, bottom) = (pad.cy - pad.ry, pad.cy + pad.ry);
+        let bands = pad_rows(&weights, (bottom - top + 1).max(0) as usize);
         for (x, y) in pad.cells() {
             // Ragged outline: some edge cells stay empty (never on the underside).
             if y < bottom && pad.is_edge(x, y) && unit(&mut r) < 0.22 {
@@ -638,7 +674,10 @@ pub fn build_scene(state: &TreeState) -> Scene {
                 let l = 1.0 + 2.2 * t + 0.9 * act + (unit(&mut r) - 0.5) * 1.6;
                 l.round().clamp(1.0, 4.0) as u8
             };
-            let leaf = pick_lang(&weights, y - top, bottom - top + 1);
+            let leaf = bands
+                .get((y - top).max(0) as usize)
+                .copied()
+                .unwrap_or(lang);
             c.set(x, y, Role::Leaf { lang: leaf, level });
         }
         // Cells grown on the last day: the branch tip and the pad's outer edge.

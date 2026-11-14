@@ -40,19 +40,21 @@ fn branch(i: usize, anchor: u32, side: Side, length: u32, pad: u32, pruned: bool
 }
 
 #[test]
-fn pick_lang_bands_the_pad_by_share() {
+fn pad_rows_bands_the_pad_by_share() {
     // Three rows of the bigger language, one of the smaller.
-    let w = [(0u8, 3u64), (1u8, 1u64)];
-    assert_eq!(pick_lang(&w, 0, 4), 0);
-    assert_eq!(pick_lang(&w, 1, 4), 0);
-    assert_eq!(pick_lang(&w, 2, 4), 0);
-    assert_eq!(pick_lang(&w, 3, 4), 1);
+    assert_eq!(pad_rows(&[(0u8, 3u64), (1u8, 1u64)], 4), vec![0, 0, 0, 1]);
     // One language: every row the same, whatever the shape.
-    assert_eq!(pick_lang(&[(2, 5)], 0, 3), 2);
-    assert_eq!(pick_lang(&[(2, 5)], 2, 3), 2);
+    assert_eq!(pad_rows(&[(2, 5)], 3), vec![2, 2, 2]);
     // Degenerate input never panics and falls back to the first colour.
-    assert_eq!(pick_lang(&[], 1, 3), 0);
-    assert_eq!(pick_lang(&[(4, 0)], 1, 3), 4);
+    assert!(pad_rows(&[], 3).is_empty());
+    assert_eq!(pad_rows(&[(4, 0)], 3), vec![4, 4, 4]);
+    // A short pad still shows a small language: skyhook, 3 rows, CSS at 9% of the bytes.
+    assert_eq!(pad_rows(&[(0, 419_530), (1, 41_077)], 3), vec![0, 0, 1]);
+    // Roam, 9 rows: 43% / 31% / 26% of the bytes land as 4 / 3 / 2 rows.
+    let roam = [(0u8, 2_934_737u64), (1, 2_120_709), (2, 1_812_788)];
+    assert_eq!(pad_rows(&roam, 9), vec![0, 0, 0, 0, 1, 1, 1, 2, 2]);
+    // More languages than rows: the biggest shares take the rows there are.
+    assert_eq!(pad_rows(&[(0, 5), (1, 4), (2, 3)], 2), vec![0, 1]);
 }
 
 #[test]
