@@ -142,7 +142,7 @@ impl LegendItem {
                 if langs.len() > 1 && total > 0 {
                     let parts: Vec<String> = langs
                         .iter()
-                        .map(|l| format!("{} {}%", l.name, l.bytes * 100 / total))
+                        .map(|l| format!("{} {}%", l.name, (l.bytes * 100 + total / 2) / total))
                         .collect();
                     format!("{repo} — {} · {commits} commits", parts.join(", "))
                 } else if let Some(l) = langs.first() {
@@ -222,7 +222,7 @@ mod tests {
         );
         assert_eq!(
             roam.title(),
-            "roam — html 42%, typescript 31%, plpgsql 26% · 2253 commits"
+            "roam — html 43%, typescript 31%, plpgsql 26% · 2253 commits"
         );
         let two = LegendItem::Branch {
             repo: "skyhook".into(),
