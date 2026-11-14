@@ -61,6 +61,7 @@ impl Default for Config {
             colors: BTreeMap::new(),
             max_pad_langs: 3,
             min_lang_share: 8,
+            pad_mix: PadMix::Patches,
         }
     }
 }
