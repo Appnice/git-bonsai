@@ -487,7 +487,7 @@ pub fn render(scene: &Scene, opts: &SvgOptions) -> String {
     for (i, item) in scene.legend.iter().take(4).enumerate() {
         let x0 = PAD + (i as u32 % 2) * (col_w + LEGEND_COL_GAP);
         let y0 = LEGEND_Y + (i as u32 / 2) * LEGEND_ROW;
-        let (swatches, label, muted) = match item {
+        let (swatches, label, muted, tip) = match item {
             LegendItem::Branch { langs, .. } => {
                 let sw: Vec<Rgb> = if langs.len() < 2 {
                     // One language: its three shades, as always.
@@ -510,9 +510,9 @@ pub fn render(scene: &Scene, opts: &SvgOptions) -> String {
                         })
                         .collect()
                 };
-                (sw, item.label(27, "…"), false)
+                (sw, item.label(27, "…"), false, (langs.len() > 1).then(|| item.title()))
             }
-            LegendItem::Pruned { .. } => (vec![fixed::SCAR], item.label(31, "…"), true),
+            LegendItem::Pruned { .. } => (vec![fixed::SCAR], item.label(31, "…"), true, None),
         };
         if anim {
             let _ = write!(
@@ -523,7 +523,10 @@ pub fn render(scene: &Scene, opts: &SvgOptions) -> String {
         } else {
             body.push_str("<g>");
         }
-        let _ = write!(body, "<title>{}</title>", esc(&item.title()));
+        // A tooltip only where the row cannot say everything: a polyglot pad.
+        if let Some(tip) = tip {
+            let _ = write!(body, "<title>{}</title>", esc(&tip));
+        }
         let mut x = x0;
         for s in swatches {
             let c = cls.of(s);
