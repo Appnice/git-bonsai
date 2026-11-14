@@ -1095,6 +1095,47 @@ mod tests {
     }
 
     #[test]
+    fn pad_langs_keeps_the_big_shares() {
+        let share = |name: &str, bytes: u64| LangShare {
+            name: name.into(),
+            color: None,
+            bytes,
+        };
+        let names = |v: &[LangShare]| -> Vec<String> { v.iter().map(|l| l.name.clone()).collect() };
+        let mut r = repo("R_1", 100, 100);
+        r.languages = vec![
+            share("TypeScript", 4_000_000),
+            share("PLpgSQL", 2_000_000),
+            share("Kotlin", 1_000_000),
+            share("Shell", 100_000),
+        ];
+        // 8% of 7.1 MB drops Shell; the other three earn a band.
+        assert_eq!(
+            names(&pad_langs(&r, &cfg())),
+            ["TypeScript", "PLpgSQL", "Kotlin"]
+        );
+        // One colour per branch is still supported.
+        let one = Config {
+            max_pad_langs: 1,
+            ..cfg()
+        };
+        assert!(pad_langs(&r, &one).is_empty());
+        // A monolingual repo has nothing to split.
+        r.languages = vec![share("Rust", 9)];
+        assert!(pad_langs(&r, &cfg()).is_empty());
+        // Only the biggest clears the floor: a second band is not worth it.
+        r.languages = vec![share("Rust", 990), share("Shell", 10)];
+        assert!(pad_langs(&r, &cfg()).is_empty());
+        // At most max_pad_langs, biggest first, whatever order they arrive in.
+        r.languages = vec![share("Shell", 400), share("Rust", 500), share("SQL", 300)];
+        let two = Config {
+            max_pad_langs: 2,
+            ..cfg()
+        };
+        assert_eq!(names(&pad_langs(&r, &two)), ["Rust", "Shell"]);
+    }
+
+    #[test]
     fn plant_grows_an_old_account_and_is_deterministic() {
         let s = history_snapshot();
         let a = plant(&s, &cfg()).unwrap();

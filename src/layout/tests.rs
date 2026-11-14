@@ -1,4 +1,5 @@
 use super::*;
+use crate::snapshot::LangShare;
 use crate::state::{Trunk, Vitals};
 use proptest::prelude::*;
 
@@ -36,6 +37,66 @@ fn branch(i: usize, anchor: u32, side: Side, length: u32, pad: u32, pruned: bool
         commits_total: 100 * (i as u64 + 1),
         pruned: pruned.then_some(time::macros::date!(2024 - 01 - 01)),
     }
+}
+
+#[test]
+fn pick_lang_bands_the_pad_by_share() {
+    // Three rows of the bigger language, one of the smaller.
+    let w = [(0u8, 3u64), (1u8, 1u64)];
+    assert_eq!(pick_lang(&w, 0, 4), 0);
+    assert_eq!(pick_lang(&w, 1, 4), 0);
+    assert_eq!(pick_lang(&w, 2, 4), 0);
+    assert_eq!(pick_lang(&w, 3, 4), 1);
+    // One language: every row the same, whatever the shape.
+    assert_eq!(pick_lang(&[(2, 5)], 0, 3), 2);
+    assert_eq!(pick_lang(&[(2, 5)], 2, 3), 2);
+    // Degenerate input never panics and falls back to the first colour.
+    assert_eq!(pick_lang(&[], 1, 3), 0);
+    assert_eq!(pick_lang(&[(4, 0)], 1, 3), 4);
+}
+
+#[test]
+fn a_polyglot_branch_paints_its_pad_in_every_language() {
+    let mut b = branch(0, 6, Side::Right, 9, 5, false);
+    b.lang = Some("TypeScript".into());
+    b.color = Some("#3178c6".into());
+    b.langs = vec![
+        LangShare {
+            name: "TypeScript".into(),
+            color: Some("#3178c6".into()),
+            bytes: 4_000_000,
+        },
+        LangShare {
+            name: "PLpgSQL".into(),
+            color: Some("#336790".into()),
+            bytes: 2_000_000,
+        },
+        LangShare {
+            name: "Kotlin".into(),
+            color: Some("#a97bff".into()),
+            bytes: 1_000_000,
+        },
+    ];
+    let scene = build_scene(&state_with(vec![b], 12, 3, vec![]));
+    assert_eq!(scene.langs.len(), 3);
+    assert_eq!(scene.grid.langs(), vec![0, 1, 2]);
+    let leaves: Vec<(usize, LangId)> = scene
+        .grid
+        .iter()
+        .filter_map(|(_, y, r)| match r {
+            Role::Leaf { lang, .. } => Some((y, lang)),
+            _ => None,
+        })
+        .collect();
+    for lang in 0..3u8 {
+        assert!(
+            leaves.iter().any(|(_, l)| *l == lang),
+            "language {lang} has no leaf: {leaves:?}"
+        );
+    }
+    // The biggest share owns the top row of the pad.
+    let top = leaves.iter().map(|(y, _)| *y).min().unwrap();
+    assert!(leaves.iter().filter(|(y, _)| *y == top).all(|(_, l)| *l == 0));
 }
 
 #[test]

@@ -7,6 +7,10 @@ on:
         description: Regenerate the golden snapshots and commit them
         type: boolean
         default: false
+      preview:
+        description: Grow a real tree for the login and print the cell map
+        type: boolean
+        default: false
 permissions:
   contents: write
 concurrency:
@@ -34,3 +38,27 @@ jobs:
           if git diff --cached --quiet; then echo "no snapshot changes"; exit 0; fi
           git commit -m "test: accept the regenerated golden snapshots"
           git push
+
+  preview:
+    if: ${{ inputs.preview }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Grow the live tree
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p preview
+          curl -fsSL -o preview/state.json \
+            https://raw.githubusercontent.com/seven-lynx/seven-lynx/main/bonsai/state.json
+          cargo run --release -- grow --login seven-lynx --state preview/state.json --out preview
+      - name: Cell map
+        run: cargo run --release -- debug --state preview/state.json
+      - name: Languages per branch
+        run: python3 -c "import json;d=json.load(open('preview/state.json'));[print(b['name'],b.get('lang'),'->',[(l['name'],l['bytes']) for l in b.get('langs',[])]) for b in d['branches']]"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bonsai-preview
+          path: preview/
