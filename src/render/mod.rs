@@ -120,7 +120,7 @@ impl LegendItem {
                 tails.push(format!(" · {commits}"));
                 for tail in tails {
                     let room = max.saturating_sub(tail.chars().count());
-                    if room >= 6 {
+                    if room >= 8 {
                         return cut(repo, room) + &tail;
                     }
                 }
@@ -241,7 +241,8 @@ mod tests {
             ],
         };
         assert_eq!(two.label(45, "…"), "skyhook · javascript, css · 45");
-        assert_eq!(two.label(27, "…"), "skyhook · javascript +1 · 45");
+        // 27 characters cannot hold the second name without eating the repo, so it counts instead.
+        assert_eq!(two.label(27, "…"), "skyhook · 2 langs · 45");
     }
 }
 
